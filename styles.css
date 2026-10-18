@@ -395,3 +395,15 @@ button.rw:active{background:var(--glass2)}
 .shop-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--muted);font-size:12.5px}
 .tagp{padding:3px 9px;border-radius:9px;font-weight:700;color:var(--tc);background:color-mix(in srgb,var(--tc) 16%,transparent);font-size:11.5px}
 a.btn{text-decoration:none}
+
+/* ---------- skaner dowodu ---------- */
+.regbox{display:grid;gap:10px;padding:14px;border-radius:20px;background:linear-gradient(135deg,color-mix(in srgb,var(--a1) 14%,transparent),color-mix(in srgb,var(--a2) 10%,transparent));border:1px solid var(--line)}
+.reglist{display:grid;gap:6px}
+.reglist div{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;font-size:13.5px;padding:7px 10px;border-radius:12px;background:var(--glass)}
+.reglist i{font-style:normal;color:var(--muted)}
+.reglist b{font-weight:700;text-align:right;overflow-wrap:anywhere}
+.reglist .ok span{color:var(--ok)}
+.reglist .no span{color:var(--warn)}
+.reglist .no b{color:var(--muted);font-weight:600}
+.fld.hit input,.fld.hit select{border-color:var(--ok);animation:hit 1.6s var(--ease)}
+@keyframes hit{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 60%,transparent)}100%{box-shadow:0 0 0 14px transparent}}

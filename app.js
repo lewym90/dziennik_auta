@@ -401,10 +401,11 @@ async function ocrPrep(dataUrl) {
   for (let i = 0; i < a.length; i += 4) { const v = clamp((a[i] - lo) * sc, 0, 255); a[i] = a[i + 1] = a[i + 2] = v; }
   x.putImageData(d, 0, 0); return c.toDataURL('image/png');
 }
-async function ocrRecognize(img, onp) {
+async function ocrRecognize(img, onp, psm) {
   if (!window.Tesseract) await loadScript('ocr/tesseract.min.js');
   const abs = p => new URL(p, location.href).href.replace(/\/$/, ''); ocrCb = onp;
   if (!ocrW) ocrW = await Tesseract.createWorker('eng', 1, { workerPath: abs('ocr/worker.min.js'), corePath: abs('ocr/core'), langPath: abs('ocr/lang'), workerBlobURL: false, logger: m => ocrCb && ocrCb(m) });
+  if (psm) await ocrW.setParameters({ tessedit_pageseg_mode: String(psm) });
   const { data } = await ocrW.recognize(img); return data.text;
 }
 async function ocrTerminate() { try { if (ocrW) await ocrW.terminate(); } catch (e) {} ocrW = null; }
@@ -505,7 +506,7 @@ function viewWelcome() {
     <div class="rise" style="--i:1"><h1>Dziennik <em>Auta</em></h1></div>
     <p class="rise" style="--i:1">Terminy OC i przeglądu, spalanie, koszty serwisów oraz raport do sprzedaży — wszystko w jednym miejscu, bez konta i bez internetu.</p>
     <div class="feat">${F('bell', 2, 'Terminy pod kontrolą', 'OC, przegląd, olej, opony — z odliczaniem')}${F('fuel', 3, 'Tankowania i spalanie', 'Automatyczne l/100 km i koszt kilometra')}${F('wrench', 4, 'Historia serwisowa', 'Wiele aut, raport PDF do sprzedaży')}${F('shield', 5, 'Prywatnie', 'Dane zostają tylko na Twoim urządzeniu')}</div>
-    <div class="rise" style="--i:6;display:grid;gap:10px"><button class="btn" data-act="veh-new">${ic('plus', 20)} Dodaj pierwsze auto</button><button class="btn ghost" data-act="demo">${ic('spark', 19)} Zobacz z przykładowymi danymi</button></div>
+    <div class="rise" style="--i:6;display:grid;gap:10px"><button class="btn" data-act="veh-scan">${ic('scan', 20)} Dodaj auto ze zdjęcia dowodu</button><button class="btn ghost" data-act="veh-new">${ic('plus', 20)} Wpisz dane ręcznie</button><button class="btn ghost" data-act="demo">${ic('spark', 19)} Zobacz z przykładowymi danymi</button></div>
   </div>`;
 }
 
@@ -677,6 +678,7 @@ const acts = {
   undo: () => { if (undoSnap) { S = JSON.parse(undoSnap); undoSnap = null; persist(); render(); $('#toast').classList.remove('show'); } },
   'veh-select': id => { S.active = id; persist(); closeSheet(); render({ enter: true }); vibrate(); },
   'veh-new': () => vehicleSheet(),
+  'veh-scan': () => { vehicleSheet(); const i = $('#reg-in'); if (i) i.click(); },
   'veh-edit': id => vehicleSheet(id),
   'fuel-new': () => fuelSheet(),
   'fuel-edit': id => fuelSheet(id),
@@ -726,12 +728,14 @@ function quickAdd() {
 /* ---------- ARKUSZ: garaż i pojazd ---------- */
 function garageSheet() {
   const body = `<div class="list">${S.vehicles.map(v => `<div style="display:flex;gap:10px;align-items:stretch"><button class="glass vcard ${v.id === S.active ? 'on' : ''}" style="--vc:${v.color};flex:1" data-act="veh-select:${v.id}">${avHTML(v, 24)}<span class="mid"><b>${esc(v.name || v.model)}</b><span>${esc([v.make, v.model, v.year].filter(Boolean).join(' '))} · ${kmf(curOdo(v.id))}</span></span>${v.id === S.active ? `<span style="color:var(--ok)">${ic('check', 22)}</span>` : plateHTML(v.plate)}</button><button class="sq" style="height:auto" data-act="veh-edit:${v.id}" aria-label="Edytuj pojazd">${ic('edit', 18)}</button></div>`).join('')}
-  <button class="btn ghost" data-act="veh-new">${ic('plus', 19)} Dodaj pojazd</button></div>`;
+  <button class="btn ghost" data-act="veh-scan">${ic('scan', 19)} Dodaj pojazd ze zdjęcia dowodu</button><button class="btn ghost" data-act="veh-new">${ic('plus', 19)} Dodaj pojazd ręcznie</button></div>`;
   openSheet('Twój garaż', body);
 }
 function vehicleSheet(id) {
   const v = id ? vById(id) : { name: '', make: '', model: '', year: '', plate: '', vin: '', fuel: 'pb95', odo: '', color: COLORS[S.vehicles.length % COLORS.length], body: 'hatch', photo: '' };
   const body = `<form class="form" autocomplete="off">
+    <div class="regbox"><button type="button" class="btn" id="reg-btn">${ic('scan', 20)} ${id ? 'Uzupełnij ze zdjęcia dowodu' : 'Dodaj ze zdjęcia dowodu rejestracyjnego'}</button><input type="file" id="reg-in" accept="image/*" multiple hidden>
+      <p class="note">Zrób zdjęcie dowodu (dobre światło, bez odblasków, cały dokument w kadrze) — możesz wybrać 2 zdjęcia, jeśli dane są na obu stronach. Zdjęcie <b>nie jest zapisywane</b>, a dane właściciela są pomijane. ${id ? '' : 'Możesz też wpisać dane ręcznie poniżej.'}</p><div id="reg-res" hidden></div></div>
     ${fld('Nazwa własna', inp('name', v.name, 'placeholder="np. Rodzinne kombi"'))}
     <div class="row2">${fld('Marka', inp('make', v.make, 'placeholder="Škoda" required'))}${fld('Model', inp('model', v.model, 'placeholder="Octavia III" required'))}</div>
     <div class="row2">${fld('Rok produkcji', inp('year', v.year, 'type="number" inputmode="numeric" min="1950" max="2100" placeholder="2018"'))}${fld('Tablica rejestracyjna', inp('plate', v.plate, 'placeholder="WX 12345" style="text-transform:uppercase" maxlength="10"'))}</div>
@@ -741,11 +745,40 @@ function vehicleSheet(id) {
     <div class="fld"><span>Typ nadwozia</span>${chips('body', Object.entries(BODIES).map(([k, b]) => ({ k, l: b.l, c: '#22d3ee', i: 'car' })), v.body || 'hatch', true)}</div>
     ${photoField('Zdjęcie auta (opcjonalnie — pojawi się na pulpicie)')}
     <div class="fld"><span>Kolor w aplikacji</span><div class="swatches">${COLORS.map(c => `<button type="button" class="${c === v.color ? 'on' : ''}" data-c="${c}" style="--c:${c}" aria-label="Kolor ${c}"></button>`).join('')}</div><input type="hidden" name="color" value="${v.color}"></div>
-    <div class="sh-actions"><button class="btn" type="submit">${ic('check', 19)} ${id ? 'Zapisz zmiany' : 'Dodaj pojazd'}</button>${id ? `<button class="btn danger" type="button" data-act="del:veh.${id}">${ic('trash', 18)} Usuń</button>` : ''}</div></form>`;
+    <div class="sh-actions"><button class="btn" type="submit">${ic('check', 19)} ${id ? 'Zapisz zmiany' : 'Dodaj pojazd'}</button>${id ? `<button class="btn danger" type="button" data-act="del:veh.${id}">${ic('trash', 18)} Usuń</button>` : ''}</div></form>
+    <div class="scan-ov" id="scan-ov" hidden><div class="spin"></div><b id="scan-msg">Wczytuję zdjęcie…</b><small>Dokument jest odczytywany na Twoim telefonie — zdjęcie nigdzie nie jest wysyłane ani zapisywane.</small></div>`;
   openSheet(id ? 'Edytuj pojazd' : 'Nowy pojazd', body, sh => {
     const vph = v.photo ? [v.photo] : []; bindPhotos(sh, vph, true);
+    const vform = fm($('form', sh));
+    $('#reg-btn', sh).onclick = () => $('#reg-in', sh).click();
+    $('#reg-in', sh).onchange = e => { const files = [...e.target.files].slice(0, 2); e.target.value = ''; if (files.length) scanReg(files); };
+    async function scanReg(files) {
+      const ov = $('#scan-ov', sh), msg = t => { $('#scan-msg', sh).textContent = t; }; ov.hidden = false; msg('Wczytuję zdjęcie…');
+      try {
+        let text = '';
+        for (let i = 0; i < files.length; i++) {
+          const data = await readImage(files[i], 2400, .9); msg(`Przygotowuję obraz (${i + 1}/${files.length})…`); const prep = await ocrPrep(data);
+          for (const psm of [3, 11]) {
+            msg(`Rozpoznaję tekst — zdjęcie ${i + 1}/${files.length}, przebieg ${psm === 3 ? 1 : 2}/2…`);
+            text += '\n' + await ocrRecognize(prep, m => { if (m.status === 'recognizing text') msg(`Rozpoznaję tekst — zdjęcie ${i + 1}/${files.length}, przebieg ${psm === 3 ? 1 : 2}/2 (${Math.round(m.progress * 100)}%)`); }, psm);
+          }
+        }
+        const r = RegParse.parse(text), res = $('#reg-res', sh);
+        const put = (name, val) => { const el = vform[name]; if (!el || val === null || val === undefined || val === '') return; el.value = val; const f = el.closest('.fld'); if (f) { f.classList.remove('hit'); void f.offsetWidth; f.classList.add('hit'); } };
+        put('make', r.make); put('model', r.model); put('year', r.year); put('plate', r.plate); put('vin', r.vin);
+        if (r.fuel) { const c = $(`.chip[data-v="${r.fuel}"]`, sh); if (c) c.click(); }
+        const rows = [['Marka', r.make], ['Model', r.model], ['Rok pierwszej rejestracji', r.year], ['Tablica rejestracyjna', r.plate], ['VIN', r.vin], ['Paliwo', r.fuel ? FUELS[r.fuel].l : null]];
+        const n = rows.filter(x => x[1]).length;
+        res.hidden = false;
+        res.innerHTML = n ? `<div class="reglist">${rows.map(([k, val]) => `<div class="${val ? 'ok' : 'no'}"><span>${val ? ic('check', 15) : ic('alert', 15)}</span><i>${k}</i><b>${val ? esc(val) : 'nie rozpoznano'}</b></div>`).join('')}</div><p class="note">${n >= 5 ? '<b>Sprawdź dane</b> z dokumentem i uzupełnij przebieg.' : 'Nie wszystko udało się odczytać. <b>Uzupełnij brakujące pola ręcznie</b> lub spróbuj zrobić wyraźniejsze zdjęcie.'}${r.notes.includes('make-from-vin') ? ' Markę ustalono na podstawie numeru VIN.' : ''}</p>` : `<p class="note"><b>Nie udało się odczytać danych.</b> Spróbuj ponownie: równe, jasne zdjęcie bez odblasków, dokument wypełnia kadr. Możesz też wpisać dane ręcznie.</p>`;
+        if (n) { toast(n >= 5 ? 'Dowód odczytany — sprawdź dane' : 'Odczytano część danych — uzupełnij resztę'); vibrate([10, 40, 14]); }
+        sh.querySelector('.sh-body').scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (err) { toast('Nie udało się uruchomić skanera. Wpisz dane ręcznie.'); }
+      finally { ov.hidden = true; ocrTerminate(); }
+    }
     $('form', sh).addEventListener('submit', e => {
-      e.preventDefault(); const f = formData(e.target), o = { name: f.name.trim(), make: f.make.trim(), model: f.model.trim(), year: +f.year || '', plate: f.plate.trim().toUpperCase(), vin: f.vin.trim().toUpperCase(), fuel: f.fuel, odo: num(f.odo) || 0, color: f.color, body: f.body, photo: vph[0] || '' };
+      e.preventDefault(); const f = formData(e.target), o = { name: f.name.trim(), make: f.make.trim(), model: f.model.trim(), year: +f.year || '', plate: f.plate.trim().toUpperCase(), vin: f.vin.replace(/\s/g, '').toUpperCase(), fuel: f.fuel, odo: num(f.odo) || 0, color: f.color, body: f.body, photo: vph[0] || '' };
+      if (o.vin && !RegParse.validVin(o.vin) && !confirm(`Numer VIN „${o.vin}” wygląda nieprawidłowo (powinien mieć 17 znaków, bez liter I, O, Q). Zapisać mimo to?`)) return;
       if (id) Object.assign(vById(id), o);
       else {
         const nv = { id: uid(), ...o }; S.vehicles.push(nv); S.active = nv.id;

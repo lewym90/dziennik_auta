@@ -1,0 +1,25 @@
+{
+  "name": "Dziennik Auta",
+  "short_name": "Dziennik Auta",
+  "description": "Terminy OC i przeglądu, tankowania i spalanie, koszty serwisów, wiele pojazdów i raport do sprzedaży auta.",
+  "lang": "pl",
+  "id": "./",
+  "start_url": "./?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#060914",
+  "theme_color": "#060914",
+  "categories": ["utilities", "productivity", "lifestyle"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Dodaj tankowanie", "short_name": "Tankowanie", "url": "./?action=fuel", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Dodaj wydatek serwisowy", "short_name": "Serwis", "url": "./?action=service", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Terminy", "short_name": "Terminy", "url": "./?tab=reminders", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pl" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dziennik Auta</title>
+<meta name="description" content="Terminy OC i przeglądu, tankowania i spalanie, koszty serwisów, wiele pojazdów i raport serwisowy do sprzedaży auta.">
+<meta name="theme-color" content="#060914">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dziennik Auta">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<link rel="stylesheet" href="styles.css">
+<script>
+  /* Ustaw motyw przed pierwszym malowaniem, aby uniknąć błysku. */
+  (function () {
+    try {
+      var s = JSON.parse(localStorage.getItem('dziennik-auta:v1') || '{}').settings || {};
+      var t = s.theme || 'auto';
+      if (t === 'auto') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+      var m = document.createElement('meta'); m.name = 'theme-color';
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body>
+  <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <div id="splash" aria-hidden="true">
+    <div class="splash-in">
+      <svg class="splash-logo" viewBox="0 0 120 120" width="112" height="112">
+        <defs><linearGradient id="spg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+        <rect width="120" height="120" rx="28" fill="url(#spg)"/>
+        <path class="arc" d="M28 82a36 36 0 1 1 64 0" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" pathLength="1"/>
+        <g class="needle"><path d="M60 66 78 44" stroke="#fff" stroke-width="8" stroke-linecap="round"/></g>
+        <circle cx="60" cy="66" r="9" fill="#fff"/><circle cx="60" cy="66" r="3.6" fill="#6d64f5"/>
+        <circle cx="44" cy="96" r="4.2" fill="#fff"/><circle cx="76" cy="96" r="4.2" fill="#fff"/><rect x="50" y="93.5" width="20" height="5" rx="2.5" fill="#fff"/>
+      </svg>
+      <div class="splash-title">Dziennik Auta</div>
+      <div class="splash-sub">Twoje auto. Pod kontrolą.</div>
+    </div>
+  </div>
+
+  <div id="app">
+    <header id="top"></header>
+    <main id="main" aria-live="polite"></main>
+  </div>
+  <nav id="tabbar" aria-label="Nawigacja główna"></nav>
+
+  <div id="sheet-root"></div>
+  <div id="report"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="fx" aria-hidden="true"></div>
+  <input type="file" id="import-file" accept="application/json,.json" hidden>
+
+  <script src="app.js"></script>
+</body>
+</html>

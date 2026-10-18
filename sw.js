@@ -1,6 +1,6 @@
 /* Dziennik Auta – service worker (praca offline).
    Po każdej zmianie plików zwiększ numer w VERSION, aby wymusić aktualizację. */
-const VERSION = 'dziennik-auta-v1.0.0';
+const VERSION = 'dziennik-auta-v1.0.1';
 const ASSETS = [
   './',
   'index.html',

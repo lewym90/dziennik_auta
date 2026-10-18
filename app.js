@@ -291,10 +291,10 @@ const plateHTML = p => p ? `<span class="plate"><span class="eu"><b>PL</b></span
 
 /* ---------- UI: toast, efekty, licznik ---------- */
 let toastT;
-function toast(msg, undo) {
-  const t = $('#toast'); t.innerHTML = `<span>${esc(msg)}</span>${undo ? '<button data-act="undo">Cofnij</button>' : ''}`;
+function toast(msg, undo, cal) {
+  const t = $('#toast'); t.innerHTML = `<span>${esc(msg)}</span>${undo ? '<button data-act="undo">Cofnij</button>' : ''}${cal ? `<button data-act="rem-ics:${cal}">📅 Do kalendarza</button>` : ''}`;
   t._undo = undo || null; t.classList.add('show'); clearTimeout(toastT);
-  toastT = setTimeout(() => t.classList.remove('show'), undo ? 6000 : 2800);
+  toastT = setTimeout(() => t.classList.remove('show'), cal ? 8000 : undo ? 6000 : 2800);
 }
 function confetti() {
   if (rm) return; const fx = $('#fx'), cols = ['#7c5cff', '#22d3ee', '#34d399', '#fbbf24', '#fb7185', '#f472b6'];
@@ -753,8 +753,8 @@ function reminderSheet(id) {
       e.preventDefault(); const d = formData(form);
       const rec = { type: old ? old.type : d.type, title: (d.title || '').trim(), dueDate: d.dueDate || '', dueKm: num(d.dueKm) || '', everyMonths: num(d.everyMonths) || 0, everyKm: num(d.everyKm) || '', notes: d.notes.trim() };
       if (!rec.dueDate && !rec.dueKm) { toast('Podaj datę lub przebieg'); return; }
-      if (old) Object.assign(old, rec); else S.reminders.push({ id: uid(), vid: v.id, ...rec });
-      persist(); closeSheet(); render(); toast('Zapisano termin'); vibrate(12);
+      const nid = old ? old.id : uid(); if (old) Object.assign(old, rec); else S.reminders.push({ id: nid, vid: v.id, ...rec });
+      persist(); closeSheet(); render(); toast('Zapisano termin', false, rec.dueDate ? nid : null); vibrate(12);
     });
   });
 }
@@ -776,7 +776,7 @@ function renewSheet(id) {
       if (d.log) S.services.push({ id: uid(), vid: r.vid, date: d.done, odo: t.km ? (num(d.odo) || 0) : 0, type: t.svc || 'inne', title: remTitle(r) + (r.notes ? ' – ' + r.notes : ''), cost, shop: '', notes: '' });
       if (t.km && num(d.odo)) bumpOdo(r.vid, num(d.odo));
       r.dueDate = d.dueDate || ''; r.dueKm = t.km ? (num(d.dueKm) || '') : '';
-      persist(); closeSheet(); render(); toast('Termin zaktualizowany ✓'); confetti(); vibrate([10, 40, 18]);
+      persist(); closeSheet(); render(); toast('Termin zaktualizowany ✓', false, r.dueDate ? r.id : null); confetti(); vibrate([10, 40, 18]);
     });
   });
 }
@@ -861,6 +861,13 @@ $('#import-file').addEventListener('change', async e => {
     S = { ...DEF(), ...j, settings: { ...DEF().settings, ...(j.settings || {}) }, reminders: j.reminders || [] }; persist(); closeSheet(); ui.tab = 'home'; render({ enter: true }); toast('Przywrócono dane');
   } catch (err) { toast('To nie jest poprawny plik kopii Dziennika Auta'); }
 });
+async function shareFile(name, content, mime, okMsg) {
+  try {
+    const file = new File([content], name, { type: mime });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Dziennik Auta – terminy' }); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  download(name, content, mime + ';charset=utf-8'); toast(okMsg);
+}
 function exportICS(items) {
   items = items.filter(r => r.dueDate); if (!items.length) return toast('Brak terminów z datą do wyeksportowania');
   const e = s => String(s).replace(/\\/g, '\\\\').replace(/([,;])/g, '\\$1').replace(/\n/g, '\\n'), stamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
@@ -871,7 +878,7 @@ function exportICS(items) {
     for (const [tr, tx] of [['-P13DT15H', 'za 14 dni'], ['-P6DT15H', 'za 7 dni'], ['-PT15H', 'jutro']]) L.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${e(name + ' — ' + tx)}`, `TRIGGER;RELATED=START:${tr}`, 'END:VALARM');
     L.push('END:VEVENT');
   }
-  L.push('END:VCALENDAR'); download(`terminy-dziennik-auta.ics`, L.join('\r\n'), 'text/calendar;charset=utf-8'); toast('Otwórz plik, aby dodać terminy do kalendarza');
+  L.push('END:VCALENDAR'); shareFile(items.length === 1 ? `termin-${slug(vById(items[0].vid) || { name: 'auto' })}.ics` : 'terminy-dziennik-auta.ics', L.join('\r\n'), 'text/calendar', 'Otwórz pobrany plik .ics, aby dodać do kalendarza');
 }
 
 /* ---------- raport do sprzedaży ---------- */

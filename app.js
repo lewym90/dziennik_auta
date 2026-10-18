@@ -84,6 +84,11 @@ const ICONS = {
   db: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/>',
   road: '<path d="M4 19 8 3M20 19 16 3M12 4v3M12 11v3M12 18v2"/>',
   tag: '<path d="M12.6 2.6a2 2 0 0 0-1.4-.6H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z"/><circle cx="7.5" cy="7.5" r=".5"/>',
+  camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/>',
+  scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/>',
+  call: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+  store: '<path d="m2 7 2-4h16l2 4"/><path d="M4 7v13h16V7"/><path d="M2 7a3.3 3.3 0 0 0 6.7 0 3.3 3.3 0 0 0 6.6 0A3.3 3.3 0 0 0 22 7"/><path d="M10 20v-5h4v5"/>',
+  nav: '<path d="m3 11 19-9-9 19-2-8z"/>',
 };
 const ic = (n, s = 20) => `<svg class="i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
 
@@ -119,7 +124,7 @@ const COLORS = ['#6d4aff', '#0ea5e9', '#10b981', '#f43f5e', '#f59e0b', '#ec4899'
 const STATIONS = ['Orlen', 'BP', 'Shell', 'Circle K', 'MOL', 'Moya', 'Amic', 'Auchan', 'Carrefour', 'Intermarché', 'Lidl (ładowarka)', 'GreenWay', 'Tauron (ładowarka)'];
 
 /* ---------- stan ---------- */
-const DEF = () => ({ v: 1, vehicles: [], fuels: [], services: [], reminders: [], active: null, notified: {}, settings: { theme: 'auto', lead: 30, notif: false, hideInstall: false } });
+const DEF = () => ({ v: 1, vehicles: [], fuels: [], services: [], reminders: [], shops: [], active: null, notified: {}, settings: { theme: 'auto', lead: 30, notif: false, hideInstall: false } });
 let S = load();
 function load() {
   try {
@@ -129,7 +134,7 @@ function load() {
   return DEF();
 }
 function persist() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('Brak miejsca w pamięci urządzenia'); } }
-const ui = { tab: 'home', period: 'y', all: false, svcF: 'all', svcQ: '', rp: { costs: true, fuel: true } };
+const ui = { tab: 'home', period: 'y', all: false, svcF: 'all', svcQ: '', rp: { costs: true, fuel: true, photos: false } };
 let deferredInstall = null;
 
 const veh = () => S.vehicles.find(v => v.id === S.active) || S.vehicles[0];
@@ -286,7 +291,18 @@ function ringSVG(info, size = 88) {
     <div class="mid">${info.level === 'none' ? `<span class="ico" style="all:unset;color:var(--faint)">${ic('plus', 22)}</span>` : `<b class="num">${info.main}</b><small>${info.unit}</small>`}</div></div>`;
 }
 const logoSVG = (s = 96) => `<svg class="logo" viewBox="0 0 120 120" width="${s}" height="${s}"><defs><linearGradient id="lgx" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><rect width="120" height="120" rx="28" fill="url(#lgx)"/><path d="M28 82a36 36 0 1 1 64 0" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"/><path d="M60 66 78 44" stroke="#fff" stroke-width="8" stroke-linecap="round"/><circle cx="60" cy="66" r="9" fill="#fff"/><circle cx="60" cy="66" r="3.6" fill="#6d64f5"/><circle cx="44" cy="96" r="4.2" fill="#fff"/><circle cx="76" cy="96" r="4.2" fill="#fff"/><rect x="50" y="93.5" width="20" height="5" rx="2.5" fill="#fff"/></svg>`;
-const carSVG = `<svg class="hero-car" viewBox="0 0 320 130" fill="none"><path d="M16 92c0-9 5-15 14-17l40-10c9-9 24-29 44-33 19-4 52-4 72 0 20 4 40 22 51 33l37 7c15 3 24 9 24 22v8c0 5-4 9-9 9h-15a30 30 0 0 0-60 0H120a30 30 0 0 0-60 0H26c-6 0-10-4-10-9z" fill="rgba(255,255,255,.16)" stroke="rgba(255,255,255,.55)" stroke-width="2"/><path d="M96 66c8-9 18-22 32-25 14-3 38-3 54 0 14 3 28 16 38 25z" fill="rgba(255,255,255,.2)"/><path d="M158 41v25" stroke="rgba(255,255,255,.45)" stroke-width="2"/><circle cx="90" cy="101" r="19" fill="rgba(8,10,28,.55)" stroke="rgba(255,255,255,.7)" stroke-width="3"/><circle cx="90" cy="101" r="7" fill="rgba(255,255,255,.55)"/><circle cx="238" cy="101" r="19" fill="rgba(8,10,28,.55)" stroke="rgba(255,255,255,.7)" stroke-width="3"/><circle cx="238" cy="101" r="7" fill="rgba(255,255,255,.55)"/><path d="M286 82h14" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".9"/></svg>`;
+const BODIES = {
+  hatch: { l: 'Hatchback', d: 'M18 98V84C18 78 22 75 30 73L58 67C66 52 80 40 100 37L170 35C188 36 206 52 218 66L270 74C292 78 304 84 304 94V98Z', w: 'M72 65C78 54 88 45 103 42L168 40C181 41 194 52 204 64Z' },
+  sedan: { l: 'Sedan', d: 'M18 98V86C18 80 22 77 30 76L72 72C82 58 98 46 122 43L176 42C196 44 212 60 222 70L270 74C292 78 304 84 304 94V98Z', w: 'M86 69C94 58 105 50 124 47L172 46C187 47 199 57 208 68Z' },
+  kombi: { l: 'Kombi', d: 'M18 98V80C18 74 22 70 28 68L36 44C38 40 44 38 50 38L182 36C198 38 210 54 220 68L270 74C292 78 304 84 304 94V98Z', w: 'M44 66L49 43L180 41C192 43 202 54 210 66Z' },
+  suv: { l: 'SUV', d: 'M16 100V80C16 72 22 68 30 66L40 46C42 40 48 36 56 36L180 34C198 35 212 50 224 64L274 72C296 76 306 84 306 96V100Z', w: 'M50 62L56 42L178 39C192 40 204 52 214 62Z', r: 21 },
+  van: { l: 'Van / minivan', d: 'M18 98V50C18 42 24 38 32 38L190 36C206 38 220 54 232 66L274 72C296 76 304 84 304 94V98Z', w: 'M30 62L34 43L186 41C198 43 210 54 220 62Z' },
+};
+function carSVG(k) {
+  const b = BODIES[k] || BODIES.hatch, r = b.r || 19, cy = 119 - r, wheel = x => `<circle cx="${x}" cy="${cy}" r="${r}" fill="rgba(8,10,28,.55)" stroke="rgba(255,255,255,.7)" stroke-width="3"/><circle cx="${x}" cy="${cy}" r="7" fill="rgba(255,255,255,.55)"/>`;
+  return `<svg class="hero-car" viewBox="0 0 320 130" fill="none" aria-hidden="true"><path d="${b.d}" fill="rgba(255,255,255,.16)" stroke="rgba(255,255,255,.55)" stroke-width="2" stroke-linejoin="round"/><path d="${b.w}" fill="rgba(255,255,255,.22)"/>${wheel(90)}${wheel(238)}<path d="M288 84h13" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".9"/></svg>`;
+}
+const avHTML = (v, s) => v.photo ? `<span class="av" data-ph="${v.photo}"></span>` : `<span class="av">${ic('car', s)}</span>`;
 const plateHTML = p => p ? `<span class="plate"><span class="eu"><b>PL</b></span><span class="no">${esc(p)}</span></span>` : '';
 
 /* ---------- UI: toast, efekty, licznik ---------- */
@@ -314,6 +330,85 @@ function runCounters(root) {
 }
 const cnt = (v, dec = 0, suf = '') => `<span class="cnt" data-to="${v}" data-dec="${dec}" data-suf="${esc(suf)}">${nf(dec).format(v)}${esc(suf)}</span>`;
 
+/* ---------- zdjęcia (IndexedDB, tylko na urządzeniu) ---------- */
+const PHDB = (() => {
+  let p;
+  const open = () => p || (p = new Promise((res, rej) => { try { const r = indexedDB.open('dziennik-auta-photos', 1); r.onupgradeneeded = () => r.result.createObjectStore('p'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }));
+  const tx = (mode, fn) => open().then(db => new Promise((res, rej) => { const t = db.transaction('p', mode), q = fn(t.objectStore('p')); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }));
+  return { put: (id, v) => tx('readwrite', s => s.put(v, id)), get: id => tx('readonly', s => s.get(id)), del: id => tx('readwrite', s => s.delete(id)), keys: () => tx('readonly', s => s.getAllKeys()) };
+})();
+const phCache = new Map();
+async function getPhoto(id) { if (phCache.has(id)) return phCache.get(id); try { const v = await PHDB.get(id); if (v) phCache.set(id, v); return v; } catch (e) { return null; } }
+function hydratePhotos(root) {
+  $$('[data-ph]', root || document).forEach(el => {
+    if (el.dataset.done === el.dataset.ph) return; el.dataset.done = el.dataset.ph;
+    getPhoto(el.dataset.ph).then(u => { if (!u) return; if (el.tagName === 'IMG') el.src = u; else el.style.backgroundImage = `url(${u})`; el.classList.add('loaded'); });
+  });
+}
+const loadImg = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+async function readImage(file, max = 1600, q = .82) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await loadImg(url), k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement('canvas');
+    c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', q);
+  } finally { URL.revokeObjectURL(url); }
+}
+function viewPhoto(id) {
+  const v = document.createElement('div'); v.className = 'viewer';
+  v.innerHTML = `<img data-ph="${id}" alt="Zdjęcie"><button class="icon-btn glass" aria-label="Zamknij">${ic('x', 20)}</button>`;
+  v.onclick = () => v.remove(); document.body.appendChild(v); hydratePhotos(v);
+}
+const allPhotoIds = () => [...new Set([...S.services.flatMap(x => x.photos || []), ...S.fuels.flatMap(x => x.photos || []), ...S.vehicles.map(x => x.photo).filter(Boolean)])];
+async function gcPhotos() { try { const used = new Set(allPhotoIds()); for (const k of await PHDB.keys()) if (!used.has(k)) await PHDB.del(k); } catch (e) {} }
+async function inlinePhotos(html) {
+  const ids = [...new Set([...html.matchAll(/data-ph="([^"]+)"/g)].map(m => m[1]))];
+  for (const id of ids) { const u = await getPhoto(id); html = html.split(`data-ph="${id}"`).join(u ? `src="${u}"` : ''); }
+  return html;
+}
+const photoField = label => `<div class="fld"><span>${label}</span><div class="photos" id="ph-grid"></div><input type="file" id="ph-in" accept="image/*" multiple hidden></div>`;
+function bindPhotos(sh, state, single) {
+  const grid = $('#ph-grid', sh), inpt = $('#ph-in', sh); if (single) inpt.multiple = false;
+  const draw = () => {
+    grid.innerHTML = state.map(id => `<div class="ph"><img data-ph="${id}" data-view="${id}" alt="Zdjęcie"><button type="button" class="x" data-rm="${id}" aria-label="Usuń zdjęcie">${ic('x', 13)}</button></div>`).join('')
+      + `<button type="button" class="ph add" data-add="1">${ic('camera', 22)}<span>${single && state.length ? 'Zmień' : 'Dodaj'}</span></button>`;
+    hydratePhotos(grid);
+  };
+  grid.addEventListener('click', e => {
+    const b = e.target.closest('[data-rm],[data-add],[data-view]'); if (!b) return;
+    if (b.dataset.rm) { state.splice(state.indexOf(b.dataset.rm), 1); draw(); } else if (b.dataset.add) inpt.click(); else viewPhoto(b.dataset.view);
+  });
+  inpt.addEventListener('change', async () => {
+    const files = [...inpt.files]; inpt.value = '';
+    for (const file of files) {
+      try { const data = await readImage(file), nid = uid(); await PHDB.put(nid, data); phCache.set(nid, data); if (single) state.length = 0; state.push(nid); draw(); }
+      catch (e) { toast('Nie udało się wczytać zdjęcia'); }
+    }
+  });
+  draw(); return { draw };
+}
+
+/* ---------- OCR paragonów (lokalny silnik w folderze ocr/) ---------- */
+let ocrW = null, ocrCb = null;
+const loadScript = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('script')); document.head.appendChild(s); });
+async function ocrPrep(dataUrl) {
+  const img = await loadImg(dataUrl), c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+  const x = c.getContext('2d'); x.drawImage(img, 0, 0); const d = x.getImageData(0, 0, c.width, c.height), a = d.data, h = new Uint32Array(256);
+  for (let i = 0; i < a.length; i += 4) { const g = (a[i] * .299 + a[i + 1] * .587 + a[i + 2] * .114) | 0; a[i] = g; h[g]++; }
+  const n = c.width * c.height; let lo = 0, hi = 255, acc = 0; for (; lo < 255 && acc + h[lo] < n * .02; lo++) acc += h[lo]; acc = 0; for (; hi > 0 && acc + h[hi] < n * .02; hi--) acc += h[hi];
+  const sc = 255 / Math.max(40, hi - lo);
+  for (let i = 0; i < a.length; i += 4) { const v = clamp((a[i] - lo) * sc, 0, 255); a[i] = a[i + 1] = a[i + 2] = v; }
+  x.putImageData(d, 0, 0); return c.toDataURL('image/png');
+}
+async function ocrRecognize(img, onp) {
+  if (!window.Tesseract) await loadScript('ocr/tesseract.min.js');
+  const abs = p => new URL(p, location.href).href.replace(/\/$/, ''); ocrCb = onp;
+  if (!ocrW) ocrW = await Tesseract.createWorker('eng', 1, { workerPath: abs('ocr/worker.min.js'), corePath: abs('ocr/core'), langPath: abs('ocr/lang'), workerBlobURL: false, logger: m => ocrCb && ocrCb(m) });
+  const { data } = await ocrW.recognize(img); return data.text;
+}
+async function ocrTerminate() { try { if (ocrW) await ocrW.terminate(); } catch (e) {} ocrW = null; }
+
 /* ---------- arkusz (bottom sheet) ---------- */
 let sheetOpen = false, skipPop = false;
 function openSheet(title, body, mount) {
@@ -323,6 +418,7 @@ function openSheet(title, body, mount) {
   root.innerHTML = `<div class="backdrop" data-act="close"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="grab"></div>
     <div class="sh-head"><h2>${esc(title)}</h2><button class="icon-btn glass" data-act="close" aria-label="Zamknij">${ic('x', 18)}</button></div><div class="sh-body">${body}</div></div>`;
   const sh = $('.sheet', root); if (mount) mount(sh);
+  hydratePhotos(sh);
   return sh;
 }
 function closeSheet() {
@@ -378,12 +474,13 @@ function render({ enter = false } = {}) {
   const views = { home: viewHome, reminders: viewReminders, fuel: viewFuel, service: viewService };
   $('#main').innerHTML = `<section class="view ${enter ? 'enter' : ''}">${has ? views[ui.tab]() : viewWelcome()}</section>`;
   if (enter) runCounters($('#main'));
+  hydratePhotos($('#main')); hydratePhotos($('#top'));
   updateBadge();
 }
 function renderTop() {
   const v = veh(); if (!v) { $('#top').innerHTML = ''; return; }
   const n = attention().length;
-  $('#top').innerHTML = `<button class="vchip glass" data-act="garage" style="--vc:${v.color}" aria-label="Zmień pojazd"><span class="av">${ic('car', 19)}</span>
+  $('#top').innerHTML = `<button class="vchip glass" data-act="garage" style="--vc:${v.color}" aria-label="Zmień pojazd">${avHTML(v, 19)}
     <span class="nm">${esc(v.name || v.model || 'Pojazd')}<span class="sub">${esc(v.plate || [v.make, v.model].filter(Boolean).join(' ') || 'Pojazd')}</span></span><span class="chev">${ic('chev', 16)}</span></button>
     <span class="grow"></span>
     <button class="icon-btn glass" data-act="tab:reminders" aria-label="Terminy">${ic('bell', 20)}${n ? `<span class="badge">${n}</span>` : ''}</button>
@@ -451,8 +548,8 @@ function viewHome() {
   const ins = insights(v, st);
   const showInstall = !isStandalone() && !S.settings.hideInstall && (deferredInstall || isIOS());
   return `
-  <section class="hero rise" style="--vc:${v.color};--i:0">
-    ${carSVG}
+  <section class="hero rise ${v.photo ? 'has-photo' : ''}" style="--vc:${v.color};--i:0">
+    ${v.photo ? `<div class="hero-photo" data-ph="${v.photo}"></div>` : carSVG(v.body)}
     <div class="hero-top"><div><div class="eyebrow">${esc([v.make, v.model].filter(Boolean).join(' '))}${v.year ? ' · ' + v.year : ''}</div><h1>${esc(v.name || v.model || 'Moje auto')}</h1></div>${plateHTML(v.plate)}</div>
     <button class="hero-odo" data-act="odo" aria-label="Zaktualizuj przebieg"><span class="lbl">Przebieg</span><b class="num">${cnt(odo, 0)}<small>km</small></b><span class="pill">${ic('edit', 14)} Zaktualizuj${lastAct ? ' · ostatni wpis ' + rel(dayDiff(today(), lastAct)) : ''}</span></button>
     <div class="hero-foot">${status}${pa}</div>
@@ -519,7 +616,7 @@ function viewFuel() {
   const item = (f, idx) => {
     const r = res[f.id], t = f.ft || 'pb95', a = st.avg[t], cls = r && a ? (r.cons <= a * .97 ? 'g' : r.cons <= a * 1.08 ? 'm' : 'r') : '';
     return `<button class="glass item rise" style="--tc:${FUELS[t].c};--i:${Math.min(idx, 8)}" data-act="fuel-edit:${f.id}"><span class="ico">${ic(t === 'ev' ? 'zap' : 'fuel', 21)}</span>
-      <span class="mid"><b>${money(f.total)}</b><small>${fmtD(f.date)}${f.station ? ' · ' + esc(f.station) : ''} · ${N2.format(f.liters)} ${FUELS[t].u} × ${N2.format(f.ppl)} zł</small></span>
+      <span class="mid"><b>${money(f.total)}</b><small>${fmtD(f.date)}${f.station ? ' · ' + esc(f.station) : ''} · ${N2.format(f.liters)} ${FUELS[t].u} × ${N2.format(f.ppl)} zł${f.photos && f.photos.length ? ' · ' + ic('camera', 12) : ''}</small></span>
       <span class="end">${r ? `<em class="cons ${cls}">${N1.format(r.cons)}</em><small>${FUELS[t].u}/100</small>` : `<small>${f.full ? kmf(f.odo) : 'częściowe'}</small>`}</span></button>`;
   };
   let idx = 0;
@@ -540,7 +637,7 @@ function svcListHTML() {
   if (!arr.length) return `<div class="empty glass"><span class="eic">${ic('wrench', 30)}</span><h3>${S.services.some(s => s.vid === v.id) ? 'Brak wyników' : 'Brak wpisów serwisowych'}</h3><p>${S.services.some(s => s.vid === v.id) ? 'Zmień filtr lub frazę wyszukiwania.' : 'Dodawaj przeglądy, naprawy i wymiany — zbudujesz pełną historię auta.'}</p></div>`;
   const g = {}; arr.forEach(s => (g[s.date.slice(0, 4)] = g[s.date.slice(0, 4)] || []).push(s));
   let idx = 0;
-  return Object.entries(g).sort((a, b) => b[0] - a[0]).map(([y, a]) => `<div class="grp"><span>${y}</span><span>${money(sum(a, 'cost'))}</span></div><div class="list">${a.map(s => { const t = SVT[s.type] || SVT.inne; return `<button class="glass item" style="--tc:${t.c}" data-act="svc-edit:${s.id}"><span class="ico">${ic(t.i, 21)}</span><span class="mid"><b>${esc(s.title || t.l)}</b><small>${fmtD(s.date)}${s.odo ? ' · ' + kmf(s.odo) : ''}${s.shop ? ' · ' + esc(s.shop) : ''}</small></span><span class="end"><b>${s.cost ? money(s.cost) : '—'}</b><small>${esc(t.l)}</small></span></button>`; }).join('')}</div>`).join('');
+  return Object.entries(g).sort((a, b) => b[0] - a[0]).map(([y, a]) => `<div class="grp"><span>${y}</span><span>${money(sum(a, 'cost'))}</span></div><div class="list">${a.map(s => { const t = SVT[s.type] || SVT.inne; return `<button class="glass item" style="--tc:${t.c}" data-act="svc-edit:${s.id}"><span class="ico">${ic(t.i, 21)}</span><span class="mid"><b>${esc(s.title || t.l)}</b><small>${fmtD(s.date)}${s.odo ? ' · ' + kmf(s.odo) : ''}${s.shop ? ' · ' + esc(s.shop) : ''}${s.photos && s.photos.length ? ' · ' + ic('camera', 12) : ''}</small></span><span class="end"><b>${s.cost ? money(s.cost) : '—'}</b><small>${esc(t.l)}</small></span></button>`; }).join('')}</div>`).join('');
 }
 function viewService() {
   const v = veh(), all = S.services.filter(s => s.vid === v.id), total = sum(all, 'cost');
@@ -553,6 +650,7 @@ function viewService() {
     <div class="glass tile" style="--tc:#fbbf24"><span class="ti">${ic('history', 19)}</span><span class="lb">Ostatni serwis</span><span class="vl num" style="font-size:19px;padding-top:4px">${last ? fmtDs(last.date) : '—'}</span><span class="sb">${last ? (last.odo ? kmf(last.odo) : esc(last.title || '')) : 'brak wpisów'}</span></div>
   </div>
   <button class="promo rise" style="--i:2" data-act="report"><span class="pi">${ic('file', 24)}</span><span><b>Raport do sprzedaży auta</b><span>Pełna historia serwisowa do PDF — zwiększa zaufanie kupującego</span></span></button>
+  <button class="glass item rise" style="--i:2;--tc:#60a5fa" data-act="shops"><span class="ico">${ic('store', 21)}</span><span class="mid"><b>Moje warsztaty</b><small>${S.shops.length ? S.shops.length + ' ' + plural(S.shops.length, 'warsztat', 'warsztaty', 'warsztatów') + ' · oceny, telefony, nawigacja' : 'Zapisz sprawdzone serwisy, ocenę i telefon'}</small></span>${ic('chev', 18)}</button>
   ${all.length ? `<div class="fld rise" style="--i:3"><input id="svc-q" type="search" placeholder="Szukaj w historii…" value="${esc(ui.svcQ)}" autocomplete="off" style="padding:13px 14px;border-radius:15px;background:var(--glass2);border:1px solid var(--line);font-size:16px;width:100%;outline:0;min-height:50px"></div>
   <div class="chips rise" style="--i:3;margin:0 -16px;padding-left:16px;padding-right:16px"><button class="chip ${ui.svcF === 'all' ? 'on' : ''}" data-act="svcf:all" style="--tc:var(--a2)"><span>Wszystkie</span></button>${types.map(t => `<button class="chip ${ui.svcF === t ? 'on' : ''}" data-act="svcf:${t}" style="--tc:${SVT[t].c}">${ic(SVT[t].i, 16)}<span>${SVT[t].l}</span></button>`).join('')}</div>` : ''}
   <div id="svc-list">${svcListHTML()}</div>`;
@@ -599,6 +697,9 @@ const acts = {
   demo: () => { if (S.vehicles.length && !confirm('Wczytanie danych demo doda przykładowe pojazdy do Twoich danych. Kontynuować?')) return; loadDemo(); closeSheet(); render({ enter: true }); toast('Wczytano dane demonstracyjne'); },
   wipe: () => { if (confirm('Usunąć WSZYSTKIE dane z tego urządzenia? Tej operacji nie można cofnąć. Zrób wcześniej kopię zapasową.')) { S = DEF(); persist(); closeSheet(); ui.tab = 'home'; render({ enter: true }); } },
   trip: () => tripSheet(),
+  shops: () => shopsSheet(),
+  'shop-new': () => shopSheet(),
+  'shop-edit': id => shopSheet(id),
   install: async () => { if (deferredInstall) { deferredInstall.prompt(); await deferredInstall.userChoice; deferredInstall = null; render(); } },
   'hide-install': () => { S.settings.hideInstall = true; persist(); render(); },
   del: (arg, el) => {
@@ -607,12 +708,13 @@ const acts = {
     if (kind === 'fuel') S.fuels = S.fuels.filter(x => x.id !== id);
     if (kind === 'svc') S.services = S.services.filter(x => x.id !== id);
     if (kind === 'rem') S.reminders = S.reminders.filter(x => x.id !== id);
+    if (kind === 'shop') S.shops = S.shops.filter(x => x.id !== id);
     if (kind === 'veh') { S.vehicles = S.vehicles.filter(x => x.id !== id); S.fuels = S.fuels.filter(x => x.vid !== id); S.services = S.services.filter(x => x.vid !== id); S.reminders = S.reminders.filter(x => x.vid !== id); if (S.active === id) S.active = S.vehicles[0]?.id || null; }
     persist(); closeSheet(); render(); vibrate(14);
   },
   'rp-close': () => closeReport(),
   'rp-print': () => window.print(),
-  'rp-html': () => { const v = veh(); download(`historia-serwisowa-${(v.plate || v.name || 'auto').replace(/\W+/g, '-')}.html`, `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Historia serwisowa – ${esc(v.name)}</title><style>body{margin:0;background:#eceff6;font-family:-apple-system,Segoe UI,Roboto,sans-serif}.rp-paper{max-width:820px;margin:18px auto;background:#fff;padding:36px 34px;color:#111}@media print{body{background:#fff}.rp-paper{margin:0;padding:0}}</style></head><body><div class="rp-paper">${reportHTML(v, ui.rp)}</div></body></html>`, 'text/html'); },
+  'rp-html': async () => { const v = veh(); const inner = await inlinePhotos(reportHTML(v, ui.rp)); download(`historia-serwisowa-${(v.plate || v.name || 'auto').replace(/\W+/g, '-')}.html`, `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Historia serwisowa – ${esc(v.name)}</title><style>body{margin:0;background:#eceff6;font-family:-apple-system,Segoe UI,Roboto,sans-serif}.rp-paper{max-width:820px;margin:18px auto;background:#fff;padding:36px 34px;color:#111}@media print{body{background:#fff}.rp-paper{margin:0;padding:0}}</style></head><body><div class="rp-paper">${inner}</div></body></html>`, 'text/html'); },
 };
 
 /* ---------- ARKUSZ: szybkie dodawanie ---------- */
@@ -623,12 +725,12 @@ function quickAdd() {
 
 /* ---------- ARKUSZ: garaż i pojazd ---------- */
 function garageSheet() {
-  const body = `<div class="list">${S.vehicles.map(v => `<div style="display:flex;gap:10px;align-items:stretch"><button class="glass vcard ${v.id === S.active ? 'on' : ''}" style="--vc:${v.color};flex:1" data-act="veh-select:${v.id}"><span class="av">${ic('car', 24)}</span><span class="mid"><b>${esc(v.name || v.model)}</b><span>${esc([v.make, v.model, v.year].filter(Boolean).join(' '))} · ${kmf(curOdo(v.id))}</span></span>${v.id === S.active ? `<span style="color:var(--ok)">${ic('check', 22)}</span>` : plateHTML(v.plate)}</button><button class="sq" style="height:auto" data-act="veh-edit:${v.id}" aria-label="Edytuj pojazd">${ic('edit', 18)}</button></div>`).join('')}
+  const body = `<div class="list">${S.vehicles.map(v => `<div style="display:flex;gap:10px;align-items:stretch"><button class="glass vcard ${v.id === S.active ? 'on' : ''}" style="--vc:${v.color};flex:1" data-act="veh-select:${v.id}">${avHTML(v, 24)}<span class="mid"><b>${esc(v.name || v.model)}</b><span>${esc([v.make, v.model, v.year].filter(Boolean).join(' '))} · ${kmf(curOdo(v.id))}</span></span>${v.id === S.active ? `<span style="color:var(--ok)">${ic('check', 22)}</span>` : plateHTML(v.plate)}</button><button class="sq" style="height:auto" data-act="veh-edit:${v.id}" aria-label="Edytuj pojazd">${ic('edit', 18)}</button></div>`).join('')}
   <button class="btn ghost" data-act="veh-new">${ic('plus', 19)} Dodaj pojazd</button></div>`;
   openSheet('Twój garaż', body);
 }
 function vehicleSheet(id) {
-  const v = id ? vById(id) : { name: '', make: '', model: '', year: '', plate: '', vin: '', fuel: 'pb95', odo: '', color: COLORS[S.vehicles.length % COLORS.length] };
+  const v = id ? vById(id) : { name: '', make: '', model: '', year: '', plate: '', vin: '', fuel: 'pb95', odo: '', color: COLORS[S.vehicles.length % COLORS.length], body: 'hatch', photo: '' };
   const body = `<form class="form" autocomplete="off">
     ${fld('Nazwa własna', inp('name', v.name, 'placeholder="np. Rodzinne kombi"'))}
     <div class="row2">${fld('Marka', inp('make', v.make, 'placeholder="Škoda" required'))}${fld('Model', inp('model', v.model, 'placeholder="Octavia III" required'))}</div>
@@ -636,11 +738,14 @@ function vehicleSheet(id) {
     ${fld('Przebieg (km)', inp('odo', v.odo, 'type="number" inputmode="numeric" min="0" placeholder="145000" required'))}
     <div class="fld"><span>Paliwo główne</span>${chips('fuel', Object.entries(FUELS).map(([k, f]) => ({ k, l: f.l, c: f.c, i: k === 'ev' ? 'zap' : 'fuel' })), v.fuel || 'pb95', true)}</div>
     ${fld('Numer VIN (opcjonalnie)', inp('vin', v.vin, 'placeholder="17 znaków" maxlength="17" style="text-transform:uppercase"'))}
+    <div class="fld"><span>Typ nadwozia</span>${chips('body', Object.entries(BODIES).map(([k, b]) => ({ k, l: b.l, c: '#22d3ee', i: 'car' })), v.body || 'hatch', true)}</div>
+    ${photoField('Zdjęcie auta (opcjonalnie — pojawi się na pulpicie)')}
     <div class="fld"><span>Kolor w aplikacji</span><div class="swatches">${COLORS.map(c => `<button type="button" class="${c === v.color ? 'on' : ''}" data-c="${c}" style="--c:${c}" aria-label="Kolor ${c}"></button>`).join('')}</div><input type="hidden" name="color" value="${v.color}"></div>
     <div class="sh-actions"><button class="btn" type="submit">${ic('check', 19)} ${id ? 'Zapisz zmiany' : 'Dodaj pojazd'}</button>${id ? `<button class="btn danger" type="button" data-act="del:veh.${id}">${ic('trash', 18)} Usuń</button>` : ''}</div></form>`;
   openSheet(id ? 'Edytuj pojazd' : 'Nowy pojazd', body, sh => {
+    const vph = v.photo ? [v.photo] : []; bindPhotos(sh, vph, true);
     $('form', sh).addEventListener('submit', e => {
-      e.preventDefault(); const f = formData(e.target), o = { name: f.name.trim(), make: f.make.trim(), model: f.model.trim(), year: +f.year || '', plate: f.plate.trim().toUpperCase(), vin: f.vin.trim().toUpperCase(), fuel: f.fuel, odo: num(f.odo) || 0, color: f.color };
+      e.preventDefault(); const f = formData(e.target), o = { name: f.name.trim(), make: f.make.trim(), model: f.model.trim(), year: +f.year || '', plate: f.plate.trim().toUpperCase(), vin: f.vin.trim().toUpperCase(), fuel: f.fuel, odo: num(f.odo) || 0, color: f.color, body: f.body, photo: vph[0] || '' };
       if (id) Object.assign(vById(id), o);
       else {
         const nv = { id: uid(), ...o }; S.vehicles.push(nv); S.active = nv.id;
@@ -667,16 +772,20 @@ function fuelSheet(id) {
   const v = veh(), old = id ? S.fuels.find(x => x.id === id) : null;
   const lastF = S.fuels.filter(f => f.vid === v.id).sort((a, b) => b.date.localeCompare(a.date) || b.odo - a.odo)[0];
   const f = old || { date: today(), odo: '', ft: lastF?.ft || (v.fuel === 'ev' ? 'ev' : v.fuel) || 'pb95', liters: '', ppl: lastF?.ppl || '', total: '', full: true, station: lastF?.station || '' };
+  const photos = [...(f.photos || [])];
   const u = t => FUELS[t].u;
   const body = `<form class="form" autocomplete="off">
+    <button type="button" class="btn ghost" id="scan-btn">${ic('scan', 20)} Skanuj paragon</button><input type="file" id="scan-in" accept="image/*" hidden>
     <div class="row2">${fld('Data', inp('date', f.date, 'type="date" required'))}${fld('Przebieg (km)', inp('odo', f.odo, `type="number" inputmode="numeric" min="0" placeholder="${curOdo(v.id) || ''}" required`))}</div>
     <div class="fld"><span>Rodzaj paliwa</span>${chips('ft', Object.entries(FUELS).map(([k, x]) => ({ k, l: x.s, c: x.c, i: k === 'ev' ? 'zap' : 'fuel' })), f.ft)}</div>
     <div class="row2">${fld('Ilość', unitIn('liters', f.liters, `<span id="u1">${u(f.ft)}</span>`, 'type="number" inputmode="decimal" step="any" min="0" placeholder="0,00" required'))}${fld('Cena jednostkowa', unitIn('ppl', f.ppl, 'zł', 'type="number" inputmode="decimal" step="any" min="0" placeholder="0,00" required'))}</div>
     ${fld('Kwota całkowita', unitIn('total', f.total, 'zł', 'type="number" inputmode="decimal" step="any" min="0" placeholder="0,00" required'))}
     ${swtch('full', 'Tankowanie do pełna', 'Potrzebne do dokładnego liczenia spalania', f.full)}
     ${fld('Stacja (opcjonalnie)', inp('station', f.station, 'list="stations" placeholder="np. Orlen"') + `<datalist id="stations">${STATIONS.map(s => `<option value="${s}">`).join('')}</datalist>`)}
+    ${photoField('Zdjęcie paragonu')}
     <p class="note" id="fnote"></p>
-    <div class="sh-actions"><button class="btn" type="submit">${ic('check', 19)} ${old ? 'Zapisz zmiany' : 'Zapisz tankowanie'}</button>${old ? `<button class="btn danger" type="button" data-act="del:fuel.${id}">${ic('trash', 18)} Usuń</button>` : ''}</div></form>`;
+    <div class="sh-actions"><button class="btn" type="submit">${ic('check', 19)} ${old ? 'Zapisz zmiany' : 'Zapisz tankowanie'}</button>${old ? `<button class="btn danger" type="button" data-act="del:fuel.${id}">${ic('trash', 18)} Usuń</button>` : ''}</div></form>
+    <div class="scan-ov" id="scan-ov" hidden><div class="spin"></div><b id="scan-msg">Wczytuję zdjęcie…</b><small>Paragon jest odczytywany na Twoim telefonie — zdjęcie nigdzie nie jest wysyłane.</small></div>`;
   openSheet(old ? 'Edytuj tankowanie' : 'Nowe tankowanie', body, sh => {
     const form = fm($('form', sh)), L = form.liters, Pp = form.ppl, T = form.total; let order = f.ppl ? ['ppl'] : [];
     const calc = () => {
@@ -690,10 +799,34 @@ function fuelSheet(id) {
     form.ft.addEventListener('change', () => { $('#u1', sh).textContent = u(form.ft.value); });
     const note = () => { const c = curOdo(v.id), o = num(form.odo.value); $('#fnote', sh).innerHTML = o > 0 && c && o < c - 0 && !old ? `Uwaga: wpisany przebieg jest niższy niż ostatni znany (<b>${kmf(c)}</b>).` : (c ? `Ostatni znany przebieg: <b>${kmf(c)}</b>` : ''); };
     form.odo.addEventListener('input', note); note();
+    const ph = bindPhotos(sh, photos);
+    $('#scan-btn', sh).onclick = () => $('#scan-in', sh).click();
+    $('#scan-in', sh).onchange = e => { const file = e.target.files[0]; e.target.value = ''; if (file) scan(file); };
+    async function scan(file) {
+      const ov = $('#scan-ov', sh), msg = t => { $('#scan-msg', sh).textContent = t; }; ov.hidden = false; msg('Wczytuję zdjęcie…');
+      try {
+        const data = await readImage(file, 2000, .86), nid = uid(); try { await PHDB.put(nid, data); phCache.set(nid, data); photos.push(nid); ph.draw(); } catch (e) {}
+        msg('Przygotowuję obraz…'); const prep = await ocrPrep(data);
+        msg('Uruchamiam skaner… (przy pierwszym użyciu to kilka sekund)');
+        const text = await ocrRecognize(prep, m => { if (m.status === 'recognizing text') msg(`Rozpoznaję tekst… ${Math.round(m.progress * 100)}%`); });
+        const r = ReceiptParse.parse(text), got = [];
+        if (r.date) { form.date.value = r.date; got.push(fmtD(r.date)); }
+        if (r.fuel) { const c = $(`.chip[data-v="${r.fuel}"]`, sh); if (c) c.click(); }
+        if (r.station) { form.station.value = r.station; got.push(r.station); }
+        if (r.liters) { L.value = r.liters.toFixed(2); got.unshift(`${N2.format(r.liters)} ${FUELS[form.ft.value].u}`); }
+        if (r.ppl) { Pp.value = String(+r.ppl.toFixed(3)); got.push(`${N2.format(r.ppl)} zł/${FUELS[form.ft.value].u}`); }
+        if (r.total) { T.value = r.total.toFixed(2); got.push(money(r.total)); }
+        order = r.liters && r.total ? ['liters', 'total'] : order;
+        const nt = $('#fnote', sh);
+        if (r.liters || r.total) { nt.innerHTML = `<b>Odczytano z paragonu:</b> ${esc(got.join(' · '))}.<br>${r.confidence >= 2 ? 'Sprawdź dane i wpisz przebieg.' : 'Nie wszystko udało się odczytać — uzupełnij brakujące pola i wpisz przebieg.'}`; toast('Paragon odczytany — sprawdź dane'); vibrate([10, 40, 14]); }
+        else { nt.innerHTML = 'Nie udało się rozpoznać danych na zdjęciu. Zdjęcie zostało dołączone — wpisz dane ręcznie albo zrób wyraźniejsze zdjęcie (dobre światło, płasko, cały paragon).'; }
+      } catch (err) { toast('Nie udało się uruchomić skanera. Wpisz dane ręcznie.'); }
+      finally { ov.hidden = true; ocrTerminate(); }
+    }
     form.addEventListener('submit', e => {
       e.preventDefault(); const d = formData(form), liters = num(d.liters), ppl = num(d.ppl), total = num(d.total), odo = num(d.odo);
       if (!(liters > 0) || !(odo >= 0) || !(total >= 0)) { toast('Uzupełnij ilość, kwotę i przebieg'); return; }
-      const rec = { id: old ? old.id : uid(), vid: v.id, date: d.date, odo, ft: d.ft, liters, ppl: ppl || total / liters, total, full: d.full, station: d.station.trim() };
+      const rec = { id: old ? old.id : uid(), vid: v.id, date: d.date, odo, ft: d.ft, liters, ppl: ppl || total / liters, total, full: d.full, station: d.station.trim(), photos: [...photos] };
       if (old) Object.assign(old, rec); else S.fuels.push(rec);
       bumpOdo(v.id, odo); persist(); closeSheet(); render(); toast(old ? 'Zapisano zmiany' : 'Dodano tankowanie'); vibrate(12);
     });
@@ -705,20 +838,22 @@ const SVC2REM = { olej: 'olej', badanie: 'przeglad' };
 function serviceSheet(id) {
   const v = veh(), old = id ? S.services.find(x => x.id === id) : null;
   const s = old || { date: today(), odo: '', type: 'naprawa', title: '', cost: '', shop: '', notes: '' };
+  const photos = [...(s.photos || [])];
   const body = `<form class="form" autocomplete="off">
     <div class="fld"><span>Rodzaj</span>${chips('type', Object.entries(SVT).map(([k, t]) => ({ k, l: t.l, c: t.c, i: t.i })), s.type)}</div>
     ${fld('Opis', inp('title', s.title, `placeholder="${esc(SVT[s.type].ph)}" id="s-title"`))}
     <div class="row2">${fld('Data', inp('date', s.date, 'type="date" required'))}${fld('Przebieg (km)', inp('odo', s.odo, `type="number" inputmode="numeric" min="0" placeholder="${curOdo(v.id) || ''}"`))}</div>
-    <div class="row2">${fld('Koszt', unitIn('cost', s.cost, 'zł', 'type="number" inputmode="decimal" step="any" min="0" placeholder="0,00"'))}${fld('Warsztat', inp('shop', s.shop, 'placeholder="np. ASO, Auto-Serwis"'))}</div>
+    <div class="row2">${fld('Koszt', unitIn('cost', s.cost, 'zł', 'type="number" inputmode="decimal" step="any" min="0" placeholder="0,00"'))}${fld('Warsztat', inp('shop', s.shop, 'list="shops" placeholder="np. ASO, Auto-Serwis"') + `<datalist id="shops">${S.shops.map(x => `<option value="${esc(x.name)}">`).join('')}</datalist>`)}</div>
     ${fld('Notatki', `<textarea name="notes" placeholder="Numery części, gwarancja, zalecenia mechanika…">${esc(s.notes)}</textarea>`)}
+    ${photoField('Zdjęcia faktur i dokumentów')}
     <div id="rem-sw" ${!old && SVC2REM[s.type] ? '' : 'hidden'}>${swtch('setrem', 'Zaktualizuj przypomnienie', 'Ustawi następny termin automatycznie', true)}</div>
     <div class="sh-actions"><button class="btn" type="submit">${ic('check', 19)} ${old ? 'Zapisz zmiany' : 'Zapisz wpis'}</button>${old ? `<button class="btn danger" type="button" data-act="del:svc.${id}">${ic('trash', 18)} Usuń</button>` : ''}</div></form>`;
   openSheet(old ? 'Edytuj wpis' : 'Nowy wpis serwisowy', body, sh => {
-    const form = fm($('form', sh));
+    const form = fm($('form', sh)); bindPhotos(sh, photos);
     form.type.addEventListener('change', () => { $('#s-title', sh).placeholder = SVT[form.type.value].ph; $('#rem-sw', sh).hidden = !!old || !SVC2REM[form.type.value]; });
     form.addEventListener('submit', e => {
       e.preventDefault(); const d = formData(form), odo = num(d.odo) || 0, cost = num(d.cost) || 0;
-      const rec = { id: old ? old.id : uid(), vid: v.id, date: d.date, odo, type: d.type, title: d.title.trim(), cost, shop: d.shop.trim(), notes: d.notes.trim() };
+      const rec = { id: old ? old.id : uid(), vid: v.id, date: d.date, odo, type: d.type, title: d.title.trim(), cost, shop: d.shop.trim(), notes: d.notes.trim(), photos: [...photos] };
       if (old) Object.assign(old, rec); else S.services.push(rec);
       if (odo) bumpOdo(v.id, odo);
       let msg = old ? 'Zapisano zmiany' : 'Dodano wpis';
@@ -781,6 +916,40 @@ function renewSheet(id) {
   });
 }
 
+/* ---------- KATALOG WARSZTATÓW ---------- */
+const SHOP_KINDS = [['mech', 'Mechanik', '#a78bfa'], ['aso', 'ASO', '#22d3ee'], ['blach', 'Blacharz / lakiernik', '#fb7185'], ['opony', 'Wulkanizacja', '#60a5fa'], ['diag', 'Diagnostyka', '#fbbf24'], ['elek', 'Elektryk', '#f472b6'], ['lpg', 'LPG', '#34d399'], ['detail', 'Detailing / myjnia', '#2dd4bf'], ['skp', 'Stacja kontroli', '#94a3b8']];
+const shopStats = sh => { const k = sh.name.trim().toLowerCase(), a = S.services.filter(x => (x.shop || '').trim().toLowerCase() === k); return { n: a.length, total: sum(a, 'cost'), last: a.map(x => x.date).sort().pop() }; };
+const starsHTML = n => `<span class="stars" aria-label="Ocena ${n} na 5">${'★'.repeat(n)}<i>${'★'.repeat(5 - n)}</i></span>`;
+const mapsURL = sh => (isIOS() ? 'https://maps.apple.com/?q=' : 'https://www.google.com/maps/search/?api=1&query=') + encodeURIComponent([sh.name, sh.address].filter(Boolean).join(' '));
+function shopsSheet() {
+  const list = [...S.shops].sort((a, b) => (b.rating || 0) - (a.rating || 0) || shopStats(b).n - shopStats(a).n || a.name.localeCompare(b.name, 'pl'));
+  const card = sh => {
+    const st = shopStats(sh), k = SHOP_KINDS.find(x => x[0] === sh.kind);
+    return `<div class="glass shop"><div class="shop-top"><div class="grow"><b>${esc(sh.name)}</b>${sh.address ? `<span class="muted-s">${esc(sh.address)}</span>` : ''}</div>${sh.rating ? starsHTML(sh.rating) : ''}</div>
+      <div class="shop-meta">${k ? `<span class="tagp" style="--tc:${k[2]}">${k[1]}</span>` : ''}${st.n ? `<span>${st.n} ${plural(st.n, 'wizyta', 'wizyty', 'wizyt')} · ${money0(st.total)} · ostatnio ${fmtDs(st.last)}</span>` : '<span>brak wizyt w historii</span>'}</div>
+      ${sh.notes ? `<p class="note">${esc(sh.notes)}</p>` : ''}
+      <div class="rem-act">${sh.phone ? `<a class="btn sm grow" href="tel:${esc(sh.phone.replace(/[^\d+]/g, ''))}" style="text-decoration:none">${ic('call', 17)} Zadzwoń</a>` : ''}<a class="btn ghost sm grow" href="${mapsURL(sh)}" target="_blank" rel="noopener" style="text-decoration:none">${ic('nav', 17)} Nawiguj</a><button class="sq" data-act="shop-edit:${sh.id}" aria-label="Edytuj">${ic('edit', 18)}</button></div></div>`;
+  };
+  openSheet('Moje warsztaty', `<div class="list">${list.length ? list.map(card).join('') : `<div class="empty"><span class="eic">${ic('store', 30)}</span><h3>Katalog jest pusty</h3><p>Zapisz sprawdzone warsztaty z oceną i numerem telefonu — a statystyki wizyt i kosztów policzą się z historii serwisowej.</p></div>`}<button class="btn" data-act="shop-new">${ic('plus', 19)} Dodaj warsztat</button></div>`);
+}
+function shopSheet(id) {
+  const old = id ? S.shops.find(x => x.id === id) : null, sh = old || { name: '', kind: 'mech', phone: '', address: '', rating: 0, notes: '' };
+  const body = `<form class="form" autocomplete="off">
+    ${fld('Nazwa', inp('name', sh.name, 'placeholder="np. Auto-Serwis Kowalski" required'))}
+    <div class="fld"><span>Rodzaj</span>${chips('kind', SHOP_KINDS.map(([k, l, c]) => ({ k, l, c, i: 'wrench' })), sh.kind || 'mech', true)}</div>
+    <div class="row2">${fld('Telefon', inp('phone', sh.phone, 'type="tel" inputmode="tel" placeholder="500 100 200"'))}${fld('Adres / miasto', inp('address', sh.address, 'placeholder="ul. Wolska 12, Warszawa"'))}</div>
+    <div class="fld"><span>Twoja ocena</span>${chips('rating', [0, 1, 2, 3, 4, 5].map(n => ({ k: String(n), l: n ? '★'.repeat(n) : 'Brak', c: '#fbbf24' })), String(sh.rating || 0), true)}</div>
+    ${fld('Notatki', `<textarea name="notes" placeholder="np. rzetelny, tańsze części, dobry kontakt z mechanikiem Rafałem">${esc(sh.notes)}</textarea>`)}
+    <div class="sh-actions"><button class="btn" type="submit">${ic('check', 19)} ${old ? 'Zapisz' : 'Dodaj warsztat'}</button>${old ? `<button class="btn danger" type="button" data-act="del:shop.${id}">${ic('trash', 18)} Usuń</button>` : ''}</div></form>`;
+  openSheet(old ? 'Edytuj warsztat' : 'Nowy warsztat', body, sheet => {
+    $('form', sheet).addEventListener('submit', e => {
+      e.preventDefault(); const d = formData(e.target), rec = { name: d.name.trim(), kind: d.kind, phone: d.phone.trim(), address: d.address.trim(), rating: +d.rating || 0, notes: d.notes.trim() };
+      if (!rec.name) return; if (old) Object.assign(old, rec); else S.shops.push({ id: uid(), ...rec });
+      persist(); render(); toast(old ? 'Zapisano' : 'Dodano warsztat'); shopsSheet();
+    });
+  });
+}
+
 /* ---------- ARKUSZ: ustawienia ---------- */
 function settingsSheet() {
   const R = (a, i, c, t, d) => `<button class="rw" data-act="${a}"><span class="ico" style="--tc:${c}">${ic(i, 19)}</span><span class="mid"><b>${t}</b><span>${d}</span></span>${ic('chev', 18)}</button>`;
@@ -794,6 +963,7 @@ function settingsSheet() {
   <div class="set-h">Eksport i kopia danych</div><div class="rows">
     ${R('report', 'file', '#a78bfa', 'Raport serwisowy (PDF)', 'Historia do sprzedaży auta')}${R('csv', 'download', '#34d399', 'Eksport do Excela (CSV)', 'Tankowania i serwisy, ' + veh().name)}${R('json', 'db', '#22d3ee', 'Kopia zapasowa (JSON)', 'Wszystkie dane — do przeniesienia na inny telefon')}${R('import', 'upload', '#fbbf24', 'Przywróć z kopii', 'Zastępuje obecne dane')}</div>
   <div class="set-h">Narzędzia</div><div class="rows">
+    ${R('shops', 'store', '#60a5fa', 'Moje warsztaty', 'Katalog sprawdzonych serwisów')}
     ${R('trip', 'calc', '#f472b6', 'Kalkulator kosztu trasy', 'Ile kosztuje przejazd i ile na osobę')}
     ${L('https://www.ufg.pl/', 'shield', '#34d399', 'Sprawdź OC w UFG', 'Ubezpieczeniowy Fundusz Gwarancyjny')}
     ${L('https://historiapojazdu.gov.pl/', 'history', '#60a5fa', 'Historia Pojazdu', 'Oficjalny serwis gov.pl (CEP)')}</div>
@@ -852,12 +1022,17 @@ function exportCSV() {
   rows.sort((a, b) => (a[0] === 'Data' ? -1 : b[0] === 'Data' ? 1 : a[0].localeCompare(b[0])));
   download(`dziennik-auta-${slug(v)}.csv`, '﻿' + rows.map(r => r.map(q).join(';')).join('\r\n'), 'text/csv;charset=utf-8'); toast('Pobrano plik CSV');
 }
-function exportJSON() { download(`dziennik-auta-kopia-${today()}.json`, JSON.stringify({ ...S, exported: new Date().toISOString(), app: 'dziennik-auta' }, null, 1), 'application/json'); toast('Pobrano kopię zapasową'); }
+async function exportJSON() {
+  const photos = {}; for (const id of allPhotoIds()) { const u = await getPhoto(id); if (u) photos[id] = u; }
+  download(`dziennik-auta-kopia-${today()}.json`, JSON.stringify({ ...S, photos, exported: new Date().toISOString(), app: 'dziennik-auta' }, null, 1), 'application/json');
+  toast(Object.keys(photos).length ? `Pobrano kopię (ze zdjęciami: ${Object.keys(photos).length})` : 'Pobrano kopię zapasową');
+}
 $('#import-file').addEventListener('change', async e => {
   const file = e.target.files[0]; e.target.value = ''; if (!file) return;
   try {
     const j = JSON.parse(await file.text()); if (!j || !Array.isArray(j.vehicles) || !Array.isArray(j.fuels) || !Array.isArray(j.services)) throw 0;
     if (!confirm(`Przywrócić kopię: ${j.vehicles.length} ${plural(j.vehicles.length, 'pojazd', 'pojazdy', 'pojazdów')}, ${j.fuels.length} tankowań, ${j.services.length} wpisów serwisowych?\nObecne dane zostaną zastąpione.`)) return;
+    if (j.photos) { for (const [pid, data] of Object.entries(j.photos)) { try { await PHDB.put(pid, data); phCache.set(pid, data); } catch (e) {} } delete j.photos; }
     S = { ...DEF(), ...j, settings: { ...DEF().settings, ...(j.settings || {}) }, reminders: j.reminders || [] }; persist(); closeSheet(); ui.tab = 'home'; render({ enter: true }); toast('Przywrócono dane');
   } catch (err) { toast('To nie jest poprawny plik kopii Dziennika Auta'); }
 });
@@ -886,7 +1061,11 @@ function odoConsistent(id) {
   const a = [...S.fuels, ...S.services].filter(x => x.vid === id && x.odo > 0).sort((x, y) => x.date.localeCompare(y.date) || x.odo - y.odo);
   if (a.length < 3) return null; for (let i = 1; i < a.length; i++) if (a[i].odo < a[i - 1].odo) return false; return a.length;
 }
-const REPORT_CSS = `.rp{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#141826;font-size:13.5px;line-height:1.45}.rp h1{font-size:26px;margin:0;letter-spacing:-.02em}.rp .hd{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;border-bottom:3px solid #6d4aff;padding-bottom:14px}.rp .brand{font-size:11px;color:#6b7390;text-transform:uppercase;letter-spacing:.12em;font-weight:700}.rp .plate{display:inline-flex;border:2px solid #111;border-radius:6px;overflow:hidden;font:700 18px/1 ui-monospace,Menlo,monospace;letter-spacing:.06em;background:#fff}.rp .plate i{background:#0b3d91;color:#fff;font:800 9px/1 sans-serif;padding:8px 5px;display:grid;place-items:center;font-style:normal}.rp .plate b{padding:8px 10px}.rp .kv{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 24px;margin:14px 0}.rp .kv div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dotted #cfd5e6;padding:4px 0}.rp .kv span{color:#6b7390}.rp .kv b{text-align:right}.rp .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0}.rp .st{border:1px solid #dde2ee;border-radius:10px;padding:10px 12px;background:#f7f8fd}.rp .st small{display:block;color:#6b7390;font-size:11px}.rp .st b{font-size:18px}.rp h2{font-size:15px;margin:22px 0 8px;letter-spacing:-.01em}.rp table{width:100%;border-collapse:collapse;font-size:12.5px}.rp th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b7390;border-bottom:2px solid #141826;padding:6px 6px}.rp td{padding:7px 6px;border-bottom:1px solid #e3e7f1;vertical-align:top}.rp td.r,.rp th.r{text-align:right;white-space:nowrap}.rp tr{break-inside:avoid}.rp .ok{display:inline-block;background:#e6f8ef;color:#0c7a4d;border-radius:8px;padding:3px 9px;font-weight:700;font-size:12px}.rp .foot{margin-top:26px;padding-top:12px;border-top:1px solid #dde2ee;color:#6b7390;font-size:11.5px}.rp .sig{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:38px}.rp .sig div{border-top:1px solid #141826;padding-top:5px;color:#6b7390;font-size:11.5px}.rp .muted{color:#6b7390}`;
+const REPORT_CSS = `.rp{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#141826;font-size:13.5px;line-height:1.45}.rp h1{font-size:26px;margin:0;letter-spacing:-.02em}.rp .hd{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;border-bottom:3px solid #6d4aff;padding-bottom:14px}.rp .brand{font-size:11px;color:#6b7390;text-transform:uppercase;letter-spacing:.12em;font-weight:700}.rp .plate{display:inline-flex;border:2px solid #111;border-radius:6px;overflow:hidden;font:700 18px/1 ui-monospace,Menlo,monospace;letter-spacing:.06em;background:#fff}.rp .plate i{background:#0b3d91;color:#fff;font:800 9px/1 sans-serif;padding:8px 5px;display:grid;place-items:center;font-style:normal}.rp .plate b{padding:8px 10px}.rp .kv{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 24px;margin:14px 0}.rp .kv div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dotted #cfd5e6;padding:4px 0}.rp .kv span{color:#6b7390}.rp .kv b{text-align:right}.rp .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0}.rp .st{border:1px solid #dde2ee;border-radius:10px;padding:10px 12px;background:#f7f8fd}.rp .st small{display:block;color:#6b7390;font-size:11px}.rp .st b{font-size:18px}.rp h2{font-size:15px;margin:22px 0 8px;letter-spacing:-.01em}.rp table{width:100%;border-collapse:collapse;font-size:12.5px}.rp th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b7390;border-bottom:2px solid #141826;padding:6px 6px}.rp td{padding:7px 6px;border-bottom:1px solid #e3e7f1;vertical-align:top}.rp td.r,.rp th.r{text-align:right;white-space:nowrap}.rp tr{break-inside:avoid}.rp .ok{display:inline-block;background:#e6f8ef;color:#0c7a4d;border-radius:8px;padding:3px 9px;font-weight:700;font-size:12px}.rp .foot{margin-top:26px;padding-top:12px;border-top:1px solid #dde2ee;color:#6b7390;font-size:11.5px}.rp .sig{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:38px}.rp .sig div{border-top:1px solid #141826;padding-top:5px;color:#6b7390;font-size:11.5px}.rp .muted{color:#6b7390}.rp .docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}.rp figure{margin:0;break-inside:avoid}.rp figure img{width:100%;border:1px solid #dde2ee;border-radius:6px;display:block}.rp figcaption{font-size:11px;color:#6b7390;margin-top:3px}.rp .vph{width:130px;height:84px;object-fit:cover;border-radius:8px;border:1px solid #dde2ee}`;
+function docsHTML(sv) {
+  const a = sv.filter(x => x.photos && x.photos.length); if (!a.length) return '';
+  return `<h2>Załączone dokumenty (zdjęcia faktur)</h2><div class="docs">${a.flatMap(x => x.photos.map(p => `<figure><img data-ph="${p}" alt=""><figcaption>${fmtD(x.date)} · ${esc(x.title || SVT[x.type].l)}</figcaption></figure>`)).join('')}</div>`;
+}
 function reportHTML(v, o) {
   const sv = S.services.filter(x => x.vid === v.id).sort((a, b) => a.date.localeCompare(b.date) || a.odo - b.odo);
   const odo = curOdo(v.id), total = sum(sv, 'cost'), rev = [...sv].reverse();
@@ -895,33 +1074,36 @@ function reportHTML(v, o) {
   const cs = odoConsistent(v.id), fs = stats(v.id, 'all'), fuelN = fs.fl.length;
   const kv = (k, val) => val ? `<div><span>${k}</span><b>${esc(val)}</b></div>` : '';
   return `<style>${REPORT_CSS}</style><div class="rp">
-    <div class="hd"><div><div class="brand">Historia serwisowa pojazdu</div><h1>${esc([v.make, v.model].filter(Boolean).join(' ') || v.name)}${v.year ? ' (' + v.year + ')' : ''}</h1></div>${v.plate ? `<span class="plate"><i>PL</i><b>${esc(v.plate)}</b></span>` : ''}</div>
+    <div class="hd"><div><div class="brand">Historia serwisowa pojazdu</div><h1>${esc([v.make, v.model].filter(Boolean).join(' ') || v.name)}${v.year ? ' (' + v.year + ')' : ''}</h1></div><div style="display:grid;gap:8px;justify-items:end">${v.plate ? `<span class="plate"><i>PL</i><b>${esc(v.plate)}</b></span>` : ''}${v.photo ? `<img class="vph" data-ph="${v.photo}" alt="">` : ''}</div></div>
     <div class="kv">${kv('Marka i model', [v.make, v.model].filter(Boolean).join(' '))}${kv('Rok produkcji', v.year)}${kv('Numer VIN', v.vin)}${kv('Rodzaj paliwa', FUELS[v.fuel || 'pb95'].l)}${kv('Aktualny przebieg', kmf(odo))}${kv('Data raportu', fmtD(today()))}${docs.map(r => kv(RT[r.type].l + ' ważne do', fmtD(r.dueDate))).join('')}</div>
     <div class="stats"><div class="st"><small>Wpisy serwisowe</small><b>${sv.length}</b></div>${o.costs ? `<div class="st"><small>Łączny koszt serwisów</small><b>${money0(total)}</b></div>` : ''}<div class="st"><small>Ostatnia wymiana oleju</small><b>${oil ? fmtDs(oil.date) + (oil.odo ? '<br><small>' + kmf(oil.odo) + '</small>' : '') : '—'}</b></div><div class="st"><small>Ostatni przegląd / badanie</small><b>${insp ? fmtDs(insp.date) : '—'}</b></div>${o.fuel && fs.primary ? `<div class="st"><small>Średnie spalanie</small><b>${N1.format(fs.avg[fs.primary])} ${FUELS[fs.primary].u}/100 km</b></div>` : ''}</div>
     ${cs ? `<p><span class="ok">✓ Spójny przebieg</span> <span class="muted">— ${cs} ${plural(cs, 'zapis', 'zapisy', 'zapisów')} w historii układa się w rosnącej kolejności.</span></p>` : ''}
     <h2>Historia napraw i przeglądów</h2>
     ${sv.length ? `<table><thead><tr><th>Data</th><th class="r">Przebieg</th><th>Rodzaj</th><th>Opis</th><th>Warsztat</th>${o.costs ? '<th class="r">Koszt</th>' : ''}</tr></thead><tbody>${sv.map(s => `<tr><td>${fmtD(s.date)}</td><td class="r">${s.odo ? N0.format(s.odo) + ' km' : '—'}</td><td>${esc(SVT[s.type]?.l || s.type)}</td><td>${esc(s.title || '')}${s.notes ? `<div class="muted">${esc(s.notes)}</div>` : ''}</td><td>${esc(s.shop || '')}</td>${o.costs ? `<td class="r">${s.cost ? money(s.cost) : '—'}</td>` : ''}</tr>`).join('')}</tbody>${o.costs ? `<tfoot><tr><td colspan="5" class="r"><b>Razem</b></td><td class="r"><b>${money(total)}</b></td></tr></tfoot>` : ''}</table>` : '<p class="muted">Brak wpisów serwisowych.</p>'}
     ${o.fuel && fuelN ? `<h2>Eksploatacja</h2><p>Zapisano ${fuelN} ${plural(fuelN, 'tankowanie', 'tankowania', 'tankowań')}${fs.kmRange ? ` w okresie obejmującym około ${kmf(fs.kmRange)}` : ''}${fs.primary ? `; średnie spalanie ${N1.format(fs.avg[fs.primary])} ${FUELS[fs.primary].u}/100 km` : ''}.</p>` : ''}
+    ${o.photos ? docsHTML(sv) : ''}
     <div class="foot">Raport wygenerowano w aplikacji Dziennik Auta dnia ${fmtD(today())}. Dane zostały wprowadzone przez właściciela pojazdu i nie stanowią dokumentu urzędowego; nie zastępują książki serwisowej ani faktur.</div>
     <div class="sig"><div>Sprzedający</div><div>Kupujący</div></div></div>`;
 }
 function openReport() {
-  const v = veh(), o = ui.rp, r = $('#report');
+  const v = veh(), o = ui.rp, r = $('#report'), anyPh = S.services.some(x => x.vid === v.id && x.photos && x.photos.length);
+  const redraw = () => { $('.rp-paper', r).innerHTML = reportHTML(v, ui.rp); hydratePhotos(r); };
   r.innerHTML = `<div class="rp-bar no-print"><button class="btn ghost" data-act="rp-close">${ic('x', 17)} Zamknij</button><span class="sp"></span>
-    <label><input type="checkbox" id="rp-costs" ${o.costs ? 'checked' : ''}> Koszty</label><label><input type="checkbox" id="rp-fuel" ${o.fuel ? 'checked' : ''}> Spalanie</label>
+    <label><input type="checkbox" id="rp-costs" ${o.costs ? 'checked' : ''}> Koszty</label><label><input type="checkbox" id="rp-fuel" ${o.fuel ? 'checked' : ''}> Spalanie</label>${anyPh ? `<label><input type="checkbox" id="rp-photos" ${o.photos ? 'checked' : ''}> Zdjęcia faktur</label>` : ''}
     <button class="btn ghost" data-act="rp-html">${ic('download', 17)} HTML</button><button class="btn" data-act="rp-print">${ic('file', 17)} PDF / Drukuj</button></div>
     <div class="rp-paper">${reportHTML(v, o)}</div>`;
-  r.classList.add('open'); r.scrollTop = 0; document.body.style.overflow = 'hidden';
-  $('#rp-costs', r).onchange = e => { ui.rp.costs = e.target.checked; $('.rp-paper', r).innerHTML = reportHTML(v, ui.rp); };
-  $('#rp-fuel', r).onchange = e => { ui.rp.fuel = e.target.checked; $('.rp-paper', r).innerHTML = reportHTML(v, ui.rp); };
+  r.classList.add('open'); r.scrollTop = 0; document.body.style.overflow = 'hidden'; hydratePhotos(r);
+  $('#rp-costs', r).onchange = e => { ui.rp.costs = e.target.checked; redraw(); };
+  $('#rp-fuel', r).onchange = e => { ui.rp.fuel = e.target.checked; redraw(); };
+  if (anyPh) $('#rp-photos', r).onchange = e => { ui.rp.photos = e.target.checked; redraw(); };
 }
 function closeReport() { const r = $('#report'); if (r.classList.contains('open')) { r.classList.remove('open'); r.innerHTML = ''; document.body.style.overflow = ''; } }
 
 /* ---------- dane demo ---------- */
 function loadDemo() {
   const now = today(), ago = n => addDays(now, -n), rnd = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
-  const v1 = { id: uid(), name: 'Octavia', make: 'Škoda', model: 'Octavia III 2.0 TDI', year: 2018, plate: 'WX 4821K', vin: 'TMBJJ7NE0J0123456', fuel: 'on', odo: 158900, color: '#6d4aff' };
-  const v2 = { id: uid(), name: 'Yaris', make: 'Toyota', model: 'Yaris Hybrid', year: 2021, plate: 'KR 39PL1', vin: '', fuel: 'pb95', odo: 41200, color: '#10b981' };
+  const v1 = { id: uid(), name: 'Octavia', make: 'Škoda', model: 'Octavia III 2.0 TDI', year: 2018, plate: 'WX 4821K', vin: 'TMBJJ7NE0J0123456', fuel: 'on', odo: 158900, color: '#6d4aff', body: 'kombi' };
+  const v2 = { id: uid(), name: 'Yaris', make: 'Toyota', model: 'Yaris Hybrid', year: 2021, plate: 'KR 39PL1', vin: '', fuel: 'pb95', odo: 41200, color: '#10b981', body: 'hatch' };
   const odoAt = n => 158900 - Math.round(n * 53);
   for (let i = 0; i < 14; i++) {
     const n = 300 - i * 21, cons = 5.7 + 0.5 * Math.sin(i * 1.3) + rnd() * .3, ppl = +(6.15 + 0.3 * Math.sin(i * .7) + rnd() * .08).toFixed(2), liters = i === 0 ? 44.2 : +(1113 * cons / 100).toFixed(2);
@@ -949,6 +1131,7 @@ function loadDemo() {
   R(v2, 'oc', addDays(now, 190), '', '', 'Warta');
   R(v2, 'przeglad', addDays(now, 400), '', '', '');
   R(v2, 'olej', addDays(now, 210), 55000, 15000, '');
+  S.shops.push({ id: uid(), name: 'Auto-Serwis Kowalski', kind: 'mech', phone: '500 100 200', address: 'ul. Wolska 12, Warszawa', rating: 5, notes: 'Rzetelny, uczciwe ceny, zawsze pokazują stare części.' }, { id: uid(), name: 'Vulkan Express', kind: 'opony', phone: '22 555 12 34', address: 'ul. Puławska 80, Warszawa', rating: 4, notes: 'Szybko, bez umawiania.' }, { id: uid(), name: 'SKP Mokotów', kind: 'skp', phone: '', address: 'ul. Racławicka 5, Warszawa', rating: 4, notes: '' });
   S.vehicles.push(v1, v2); S.active = v1.id; persist(); ui.tab = 'home';
 }
 
@@ -965,7 +1148,7 @@ function boot() {
   setTimeout(() => { const el = $('#splash'); el && el.remove(); }, 2100);
   if (S.vehicles.length) {
     const a = q.get('action'); if (a === 'fuel') setTimeout(() => fuelSheet(), 1300); if (a === 'service') setTimeout(() => serviceSheet(), 1300);
-    checkNotifications();
+    checkNotifications(); gcPhotos();
   }
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {

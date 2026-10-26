@@ -5,7 +5,7 @@
 (() => {
 'use strict';
 
-const APP_VER = '1.0.0';
+const APP_VER = '1.3.0';
 const KEY = 'dziennik-auta:v1';
 
 /* ---------- narzędzia ---------- */
@@ -133,7 +133,7 @@ function load() {
   } catch (e) {}
   return DEF();
 }
-function persist() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('Brak miejsca w pamięci urządzenia'); } }
+function persist() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('Brak miejsca w pamięci urządzenia'); } pushSoon(); }
 const ui = { tab: 'home', period: 'y', all: false, svcF: 'all', svcQ: '', rp: { costs: true, fuel: true, photos: false } };
 let deferredInstall = null;
 
@@ -661,6 +661,7 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', e => {
   if (e.target.id === 'set-lead') { S.settings.lead = +e.target.value; persist(); render(); }
+  if (e.target.id === 'push-hour') { S.settings.pushHour = +e.target.value; persist(); }
 });
 
 /* ---------- AKCJE ---------- */
@@ -693,6 +694,10 @@ const acts = {
   report: () => { closeSheet(); openReport(); },
   theme: t => { S.settings.theme = t; persist(); applyTheme(); settingsSheet(); render(); },
   notif: () => enableNotifications(),
+  push: () => pushSheet(),
+  'push-on': async (a, el) => { if (el) el.disabled = true; try { await AutaPush.connect(($('#push-url') || {}).value); await pushSyncNow(true); toast('Powiadomienia push włączone'); } catch (e) { toast(e.message || 'Nie udało się połączyć'); } pushSheet(); },
+  'push-off': async () => { await AutaPush.disconnect(); toast('Powiadomienia push wyłączone'); pushSheet(); },
+  'push-test': async (a, el) => { if (el) el.disabled = true; try { await AutaPush.test(); toast('Wysłano. Za chwilę powinno przyjść powiadomienie.'); } catch (e) { toast(e.message || 'Nie udało się wysłać'); } if (el) el.disabled = false; },
   'csv': () => exportCSV(),
   'json': () => exportJSON(),
   'import': () => $('#import-file').click(),
@@ -992,7 +997,8 @@ function settingsSheet() {
   <div class="set-h">Wygląd</div><div class="seg">${[['auto', 'Auto'], ['dark', 'Ciemny'], ['light', 'Jasny']].map(([k, l]) => `<button class="${th === k ? 'on' : ''}" data-act="theme:${k}">${l}</button>`).join('')}</div>
   <div class="set-h">Przypomnienia</div><div class="rows">
     <div class="rw"><span class="ico" style="--tc:#fbbf24">${ic('bell', 19)}</span><span class="mid"><b>Ostrzegaj z wyprzedzeniem</b><span>Kiedy termin trafia w „zbliżające się”</span></span><select id="set-lead">${[7, 14, 30, 45, 60].map(n => `<option value="${n}" ${S.settings.lead === n ? 'selected' : ''}>${n} dni</option>`).join('')}</select></div>
-    ${nSup ? R('notif', 'bell', '#22d3ee', 'Powiadomienia', np === 'granted' ? (S.settings.notif ? 'Włączone — pojawią się po otwarciu aplikacji' : 'Dotknij, aby włączyć') : np === 'denied' ? 'Zablokowane w ustawieniach przeglądarki' : 'Dotknij, aby zezwolić') : ''}</div>
+    ${window.AutaPush && AutaPush.supported() ? R('push', 'bell', '#34d399', 'Powiadomienia push', AutaPush.cfg() ? 'Włączone — przypomnienia przyjdą nawet przy zamkniętej aplikacji' : 'Przypomnienia o terminach także przy zamkniętej aplikacji') : ''}
+    ${nSup && !(window.AutaPush && AutaPush.cfg()) ? R('notif', 'bell', '#22d3ee', 'Powiadomienia przy otwarciu', np === 'granted' ? (S.settings.notif ? 'Włączone — pojawią się po otwarciu aplikacji' : 'Dotknij, aby włączyć') : np === 'denied' ? 'Zablokowane w ustawieniach przeglądarki' : 'Dotknij, aby zezwolić') : ''}</div>
   <div class="set-h">Eksport i kopia danych</div><div class="rows">
     ${R('report', 'file', '#a78bfa', 'Raport serwisowy (PDF)', 'Historia do sprzedaży auta')}${R('csv', 'download', '#34d399', 'Eksport do Excela (CSV)', 'Tankowania i serwisy, ' + veh().name)}${R('json', 'db', '#22d3ee', 'Kopia zapasowa (JSON)', 'Wszystkie dane — do przeniesienia na inny telefon')}${R('import', 'upload', '#fbbf24', 'Przywróć z kopii', 'Zastępuje obecne dane')}</div>
   <div class="set-h">Narzędzia</div><div class="rows">
@@ -1011,9 +1017,40 @@ async function enableNotifications() {
   S.settings.notif = p === 'granted'; persist();
   toast(p === 'granted' ? 'Powiadomienia włączone' : 'Powiadomienia nie zostały zatwierdzone'); settingsSheet(); if (p === 'granted') checkNotifications(true);
 }
+/* ---------- powiadomienia push z serwera ---------- */
+const odoPoints = vid => [...S.fuels.filter(a => a.vid === vid), ...S.services.filter(a => a.vid === vid)].map(a => ({ date: a.date, odo: a.odo }));
+function pushItems() {
+  if (!window.AutaPush) return [];
+  return AutaPush.build({
+    reminders: S.reminders, lead: S.settings.lead, hour: S.settings.pushHour || 9,
+    vehName: id => { const v = vById(id); return v ? (v.name || v.model || 'Auto') : 'Auto'; }, title: remTitle,
+    odo: curOdo, rate: id => AutaPush.dailyRate(odoPoints(id)),
+  });
+}
+let pushT = 0;
+function pushSoon() { if (!window.AutaPush || !AutaPush.cfg()) return; clearTimeout(pushT); pushT = setTimeout(() => pushSyncNow(), 1200); }
+async function pushSyncNow(force) {
+  try { return await AutaPush.sync(pushItems(), force); } catch (e) { return null; }
+}
+function pushSheet() {
+  const c = window.AutaPush && AutaPush.cfg(), sup = window.AutaPush && AutaPush.supported();
+  const ios = isIOS(), n = c ? (c.count ?? pushItems().length) : 0;
+  const next = c && c.next ? new Date(c.next).toLocaleString('pl-PL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '';
+  const warn = !sup ? `<p class="note" style="color:var(--warn)">${ios ? 'Na iPhonie powiadomienia push działają tylko w aplikacji dodanej do ekranu początkowego (Safari → Udostępnij → Do ekranu początkowego), otwartej z ikony. Wymagany iOS 16.4 lub nowszy.' : 'Ta przeglądarka nie obsługuje powiadomień push.'}</p>` : '';
+  const hours = Array.from({ length: 15 }, (_, i) => i + 6);
+  const body = `
+  <div class="rows"><div class="rw"><span class="ico" style="--tc:#34d399">${ic('bell', 19)}</span><span class="mid"><b>${c ? 'Włączone' : 'Wyłączone'}</b><span>${c ? (n ? `Zaplanowano ${n} ${plural(n, 'powiadomienie', 'powiadomienia', 'powiadomień')}${next ? ', najbliższe: ' + next : ''}` : 'Brak zaplanowanych — dodaj terminy z datą') : 'Przypomnienia o OC, przeglądzie i oleju przyjdą na ten telefon.'}</span></span></div>
+  ${c ? `<div class="rw"><span class="ico" style="--tc:#fbbf24">${ic('timer', 19)}</span><span class="mid"><b>Godzina powiadomień</b><span>Kiedy przypominać w dniu przypomnienia</span></span><select id="push-hour">${hours.map(h => `<option value="${h}" ${(S.settings.pushHour || 9) === h ? 'selected' : ''}>${pad(h)}:00</option>`).join('')}</select></div>` : ''}</div>
+  ${warn}
+  <p class="note">Przypomnienia dochodzą ${S.settings.lead}, 14, 7 i 1 dzień przed terminem oraz w dniu terminu, a po terminie jeszcze 1, 3 i 7 dni później, o wybranej godzinie, także przy zamkniętej aplikacji. Każdy telefon dostaje wyłącznie własne powiadomienia: serwer przechowuje tylko treść zaplanowanych przypomnień tego telefonu, bez zdjęć, kosztów i historii.</p>
+  ${c ? `<div class="btn-row" style="display:flex;gap:10px;margin-top:14px"><button class="btn ghost grow" data-act="push-test">Wyślij test</button><button class="btn danger grow" data-act="push-off">Wyłącz</button></div>`
+      : `<div style="margin-top:14px"><button class="btn" data-act="push-on" ${sup ? '' : 'disabled'} style="width:100%">Włącz powiadomienia push</button></div>
+         <details style="margin-top:14px"><summary class="note" style="cursor:pointer">Zaawansowane: adres serwera</summary><input id="push-url" value="${esc(AutaPush ? AutaPush.DEF_URL : '')}" inputmode="url" autocapitalize="off" autocorrect="off" style="margin-top:8px;padding:13px 14px;border-radius:15px;background:var(--glass2);border:1px solid var(--line);font-size:16px;width:100%;outline:0"></details>`}`;
+  openSheet('Powiadomienia push', body);
+}
 async function checkNotifications(force) {
   try {
-    if (!S.settings.notif || !('Notification' in window) || Notification.permission !== 'granted') return;
+    if (!S.settings.notif || !('Notification' in window) || Notification.permission !== 'granted' || (window.AutaPush && AutaPush.cfg())) return;
     const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); const t = today();
     for (const r of attention()) {
       const k = r.id + t; if (S.notified[k] && !force) continue; S.notified[k] = 1;
@@ -1183,6 +1220,7 @@ function boot() {
     const a = q.get('action'); if (a === 'fuel') setTimeout(() => fuelSheet(), 1300); if (a === 'service') setTimeout(() => serviceSheet(), 1300);
     checkNotifications(); gcPhotos();
   }
+  if (window.AutaPush && AutaPush.cfg()) AutaPush.ensure().then(() => pushSyncNow()).catch(() => {});
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     const had = !!navigator.serviceWorker.controller;

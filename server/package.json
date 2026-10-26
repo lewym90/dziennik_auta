@@ -1,0 +1,9 @@
+{
+  "name": "auta-push",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Serwer powiadomień Web Push dla Dziennika Auta: każdy telefon ma własny harmonogram i dostaje wyłącznie własne przypomnienia.",
+  "scripts": { "start": "node push-server.mjs", "test": "node test.mjs" },
+  "dependencies": { "web-push": "3.6.7" }
+}

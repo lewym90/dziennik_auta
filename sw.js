@@ -1,6 +1,6 @@
 /* Dziennik Auta – service worker (praca offline).
    Po każdej zmianie plików zwiększ numer w VERSION, aby wymusić aktualizację. */
-const VERSION = 'dziennik-auta-v1.2.0';
+const VERSION = 'dziennik-auta-v1.3.0';
 const ASSETS = [
   './',
   'index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
   'app.js',
   'receipt.js',
   'regparse.js',
+  'push.js',
   'manifest.webmanifest',
   'icons/icon-192.png',
   'icons/icon-512.png',
@@ -62,12 +63,23 @@ self.addEventListener('fetch', (e) => {
   );
 });
 
+// Push z serwera: zawsze pokazujemy powiadomienie (wymóg iOS). Treść przychodzi gotowa z harmonogramu tego telefonu.
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { title: 'Dziennik Auta', body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'Dziennik Auta', {
+    body: d.body || '', tag: d.tag || 'auta', renotify: true,
+    icon: 'icons/icon-192.png', badge: 'icons/favicon-32.png', data: { url: d.url || './?tab=reminders' }
+  }));
+});
+
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || './?tab=reminders';
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       for (const c of list) { if ('focus' in c) return c.focus(); }
-      return self.clients.openWindow('./?tab=reminders');
+      return self.clients.openWindow(url);
     })
   );
 });

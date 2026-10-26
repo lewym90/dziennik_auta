@@ -45,10 +45,25 @@ Działa **offline**, otwiera się z ekranu startowego jak zwykła aplikacja, nie
 - **Android (Chrome):** otwórz adres → menu ⋮ → **Zainstaluj aplikację** (lub użyj przycisku „Zainstaluj” w aplikacji).
 - **Komputer (Chrome/Edge):** ikona instalacji w pasku adresu.
 
+## Powiadomienia push (serwer)
+
+Folder `server/` to mała usługa Web Push (Node.js, jedna zależność `web-push`). Instalacja na VPS z Caddy (jako root, jedno polecenie):
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/lewym90/dziennik_auta/main/server/install.sh)
+```
+
+- Osobny użytkownik i katalog `/opt/auta-push`, nasłuch tylko na `127.0.0.1:8794`, trasa `/auta-push/*` w Caddy (z walidacją i automatycznym wycofaniem przy błędzie). Pozostałych usług nie rusza.
+- **Każdy użytkownik dostaje tylko swoje powiadomienia.** Telefon ma losowy identyfikator i token (zapisane tylko w tym telefonie, poza kopią zapasową); serwer trzyma skrót tokenu i harmonogram wyłącznie tego telefonu. Nic nie trzeba konfigurować po stronie osoby, której udostępniasz aplikację: wystarczy *Więcej → Powiadomienia push → Włącz*.
+- Aplikacja liczy harmonogram (termin za N dni, jutro, dziś, po terminie) i wysyła go na serwer przy każdej zmianie danych. Serwer o właściwej godzinie wysyła push przez Apple/Google. Serwer nie dostaje zdjęć, kosztów ani historii.
+- Zabezpieczenia: lista dozwolonych usług push (ochrona przed nadużyciem serwera), limity rejestracji i zapytań, limit 25 powiadomień na telefon na dobę, usuwanie wygasłych i nieaktywnych urządzeń.
+- Testy: `cd server && npm install && npm test`.
+- iPhone: push działa tylko z aplikacji dodanej do ekranu początkowego (iOS 16.4+).
+
 ## Ważne informacje
 
 - **Kopie zapasowe.** Dane i zdjęcia są w pamięci przeglądarki (kopia JSON zawiera też zdjęcia). Wyczyszczenie danych witryny lub odinstalowanie aplikacji je usuwa – zrób okresową kopię (*Więcej → Kopia zapasowa*) i przechowuj ją np. w chmurze. Tą samą kopią przenosisz dane na nowy telefon.
-- **Powiadomienia.** Statyczny hosting (GitHub Pages) nie może wysyłać powiadomień push w tle. Aplikacja pokazuje powiadomienia przy otwarciu, a niezawodne przypomnienia daje eksport terminów do kalendarza (.ics).
+- **Powiadomienia.** Bez serwera aplikacja pokazuje powiadomienia przy otwarciu, a niezawodne przypomnienia daje eksport terminów do kalendarza (.ics). Z własnym serwerem (folder `server/`) działają prawdziwe powiadomienia push, także przy zamkniętej aplikacji: *Więcej → Powiadomienia push → Włącz*.
 - **Aktualizacje.** Po zmianie plików zwiększ numer w `VERSION` w pliku `sw.js` (np. `dziennik-auta-v1.0.1`), aby urządzenia pobrały nową wersję.
 - **Raport nie jest dokumentem urzędowym.** To zestawienie danych wprowadzonych przez właściciela.
 
@@ -62,6 +77,8 @@ sw.js                   service worker (offline)
 manifest.webmanifest    manifest PWA (ikony, skróty)
 receipt.js              parser paragonów
 regparse.js             parser dowodu rejestracyjnego
+push.js                 harmonogram i połączenie z serwerem push
+server/                 serwer powiadomień push + instalator + testy
 ocr/                    lokalny silnik OCR (tesseract.js, ~15 MB)
 icons/                  ikony (PNG + SVG)
 tools/gen_icons.py      generator ikon (Pillow)

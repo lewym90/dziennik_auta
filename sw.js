@@ -1,6 +1,6 @@
 /* Dziennik Auta – service worker (praca offline).
    Po każdej zmianie plików zwiększ numer w VERSION, aby wymusić aktualizację. */
-const VERSION = 'dziennik-auta-v1.3.0';
+const VERSION = 'dziennik-auta-v1.4.0';
 const ASSETS = [
   './',
   'index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
   'app.js',
   'receipt.js',
   'regparse.js',
+  'scanlib.js',
   'push.js',
   'manifest.webmanifest',
   'icons/icon-192.png',

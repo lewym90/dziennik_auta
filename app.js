@@ -5,7 +5,7 @@
 (() => {
 'use strict';
 
-const APP_VER = '1.3.0';
+const APP_VER = '1.4.0';
 const KEY = 'dziennik-auta:v1';
 
 /* ---------- narzędzia ---------- */
@@ -408,6 +408,29 @@ async function ocrRecognize(img, onp, psm) {
   if (psm) await ocrW.setParameters({ tessedit_pageseg_mode: String(psm) });
   const { data } = await ocrW.recognize(img); return data.text;
 }
+/* skaner dowodu: obraz to { w, h, g } (skala szarości); wynik to tekst i linie z ramkami */
+async function grayFromData(dataUrl) {
+  const img = await loadImg(dataUrl); let w = img.naturalWidth, h = img.naturalHeight; const long = Math.max(w, h), k = long < 1800 ? Math.min(1.6, 1800 / long) : 1;
+  w = Math.round(w * k); h = Math.round(h * k);
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.drawImage(img, 0, 0, w, h);
+  const a = x.getImageData(0, 0, w, h).data, g = new Uint8ClampedArray(w * h);
+  for (let i = 0; i < g.length; i++) g[i] = a[i * 4] * .299 + a[i * 4 + 1] * .587 + a[i * 4 + 2] * .114;
+  return { w, h, g };
+}
+function grayToUrl(im) {
+  const c = document.createElement('canvas'); c.width = im.w; c.height = im.h; const x = c.getContext('2d'), d = x.createImageData(im.w, im.h), o = d.data;
+  for (let i = 0; i < im.g.length; i++) { const v = im.g[i]; o[i * 4] = o[i * 4 + 1] = o[i * 4 + 2] = v; o[i * 4 + 3] = 255; }
+  x.putImageData(d, 0, 0); return c.toDataURL('image/png');
+}
+async function ocrRecognizeEx(im, o, onp) {
+  if (!window.Tesseract) await loadScript('ocr/tesseract.min.js');
+  const abs = p => new URL(p, location.href).href.replace(/\/$/, ''); ocrCb = onp || null;
+  if (!ocrW) ocrW = await Tesseract.createWorker('eng', 1, { workerPath: abs('ocr/worker.min.js'), corePath: abs('ocr/core'), langPath: abs('ocr/lang'), workerBlobURL: false, logger: m => ocrCb && ocrCb(m) });
+  await ocrW.setParameters({ tessedit_pageseg_mode: String(o.psm || 3), tessedit_char_whitelist: o.whitelist || '' });
+  const { data } = await ocrW.recognize(grayToUrl(im), {}, { text: true, blocks: true });
+  const lines = []; for (const b of data.blocks || []) for (const p of b.paragraphs || []) for (const l of p.lines || []) lines.push({ text: (l.text || '').trim(), box: l.bbox, conf: l.confidence });
+  return { text: data.text || '', lines };
+}
 async function ocrTerminate() { try { if (ocrW) await ocrW.terminate(); } catch (e) {} ocrW = null; }
 
 /* ---------- arkusz (bottom sheet) ---------- */
@@ -737,16 +760,19 @@ function garageSheet() {
   openSheet('Twój garaż', body);
 }
 function vehicleSheet(id) {
+  const inspDue = id ? ((S.reminders.find(r => r.vid === id && r.type === 'przeglad') || {}).dueDate || '') : '';
   const v = id ? vById(id) : { name: '', make: '', model: '', year: '', plate: '', vin: '', fuel: 'pb95', odo: '', color: COLORS[S.vehicles.length % COLORS.length], body: 'hatch', photo: '' };
   const body = `<form class="form" autocomplete="off">
-    <div class="regbox"><button type="button" class="btn" id="reg-btn">${ic('scan', 20)} ${id ? 'Uzupełnij ze zdjęcia dowodu' : 'Dodaj ze zdjęcia dowodu rejestracyjnego'}</button><input type="file" id="reg-in" accept="image/*" multiple hidden>
-      <p class="note">Zrób zdjęcie dowodu (dobre światło, bez odblasków, cały dokument w kadrze) — możesz wybrać 2 zdjęcia, jeśli dane są na obu stronach. Zdjęcie <b>nie jest zapisywane</b>, a dane właściciela są pomijane. ${id ? '' : 'Możesz też wpisać dane ręcznie poniżej.'}</p><div id="reg-res" hidden></div></div>
+    <div class="regbox"><button type="button" class="btn" id="reg-btn">${ic('scan', 20)} ${id ? 'Uzupełnij ze zdjęć dowodu' : 'Dodaj ze zdjęć dowodu rejestracyjnego'}</button><input type="file" id="reg-in" accept="image/*" multiple hidden>
+      <div id="reg-tray" hidden></div>
+      <p class="note" id="reg-note">Dodaj <b>wszystkie strony dowodu</b>: przód (tablica, VIN, marka, model), środek (paliwo, pojemność) i tył (rok produkcji), a także stronę z pieczątką badania technicznego. Każde zdjęcie dodajesz osobno, a odczyt zaczyna się po dotknięciu „Odczytaj”. Dobre światło, bez odblasków, dokument w kadrze. Zdjęcia <b>nie są zapisywane</b>, a dane właściciela są pomijane. ${id ? '' : 'Możesz też wpisać dane ręcznie poniżej.'}</p><div id="reg-res" hidden></div></div>
     ${fld('Nazwa własna', inp('name', v.name, 'placeholder="np. Rodzinne kombi"'))}
     <div class="row2">${fld('Marka', inp('make', v.make, 'placeholder="Škoda" required'))}${fld('Model', inp('model', v.model, 'placeholder="Octavia III" required'))}</div>
     <div class="row2">${fld('Rok produkcji', inp('year', v.year, 'type="number" inputmode="numeric" min="1950" max="2100" placeholder="2018"'))}${fld('Tablica rejestracyjna', inp('plate', v.plate, 'placeholder="WX 12345" style="text-transform:uppercase" maxlength="10"'))}</div>
     ${fld('Przebieg (km)', inp('odo', v.odo, 'type="number" inputmode="numeric" min="0" placeholder="145000" required'))}
     <div class="fld"><span>Paliwo główne</span>${chips('fuel', Object.entries(FUELS).map(([k, f]) => ({ k, l: f.l, c: f.c, i: k === 'ev' ? 'zap' : 'fuel' })), v.fuel || 'pb95', true)}</div>
     ${fld('Numer VIN (opcjonalnie)', inp('vin', v.vin, 'placeholder="17 znaków" maxlength="17" style="text-transform:uppercase"'))}
+    ${fld('Termin badania technicznego (opcjonalnie)', inp('inspect', inspDue, 'type="date"'))}
     <div class="fld"><span>Typ nadwozia</span>${chips('body', Object.entries(BODIES).map(([k, b]) => ({ k, l: b.l, c: '#22d3ee', i: 'car' })), v.body || 'hatch', true)}</div>
     ${photoField('Zdjęcie auta (opcjonalnie — pojawi się na pulpicie)')}
     <div class="fld"><span>Kolor w aplikacji</span><div class="swatches">${COLORS.map(c => `<button type="button" class="${c === v.color ? 'on' : ''}" data-c="${c}" style="--c:${c}" aria-label="Kolor ${c}"></button>`).join('')}</div><input type="hidden" name="color" value="${v.color}"></div>
@@ -756,27 +782,41 @@ function vehicleSheet(id) {
     const vph = v.photo ? [v.photo] : []; bindPhotos(sh, vph, true);
     const vform = fm($('form', sh));
     $('#reg-btn', sh).onclick = () => $('#reg-in', sh).click();
-    $('#reg-in', sh).onchange = e => { const files = [...e.target.files].slice(0, 2); e.target.value = ''; if (files.length) scanReg(files); };
-    async function scanReg(files) {
-      const ov = $('#scan-ov', sh), msg = t => { $('#scan-msg', sh).textContent = t; }; ov.hidden = false; msg('Wczytuję zdjęcie…');
+    const scanFiles = [], MAXF = 6, tray = $('#reg-tray', sh);
+    const urls = new Map(), url = f => { if (!urls.has(f)) urls.set(f, URL.createObjectURL(f)); return urls.get(f); };
+    function drawTray() {
+      tray.hidden = !scanFiles.length;
+      tray.innerHTML = scanFiles.length ? `<div class="reg-thumbs">${scanFiles.map((f, i) => `<div class="rt"><img src="${url(f)}" alt="Zdjęcie ${i + 1}"><button type="button" data-rm="${i}" aria-label="Usuń zdjęcie ${i + 1}">${ic('x', 14)}</button><i>${i + 1}</i></div>`).join('')}</div>
+        <div class="btn-row"><button type="button" class="btn ghost sm grow" id="reg-more" ${scanFiles.length >= MAXF ? 'disabled' : ''}>${ic('plus', 16)} Dodaj kolejne zdjęcie</button><button type="button" class="btn sm grow" id="reg-go">${ic('scan', 16)} Odczytaj (${scanFiles.length})</button></div>` : '';
+      $('#reg-btn', sh).hidden = !!scanFiles.length;
+    }
+    tray.addEventListener('click', e => {
+      const rm = e.target.closest('[data-rm]'); if (rm) { const [f] = scanFiles.splice(+rm.dataset.rm, 1); if (f && urls.has(f)) { URL.revokeObjectURL(urls.get(f)); urls.delete(f); } drawTray(); return; }
+      if (e.target.closest('#reg-more')) $('#reg-in', sh).click();
+      if (e.target.closest('#reg-go')) scanReg();
+    });
+    $('#reg-in', sh).onchange = e => {
+      const add = [...e.target.files].filter(f => /^image\//.test(f.type) || !f.type); e.target.value = '';
+      if (scanFiles.length + add.length > MAXF) toast(`Maksymalnie ${MAXF} zdjęć naraz`);
+      scanFiles.push(...add.slice(0, Math.max(0, MAXF - scanFiles.length))); drawTray();
+    };
+    async function scanReg() {
+      const files = scanFiles.slice(); if (!files.length) return;
+      const ov = $('#scan-ov', sh), msg = t => { $('#scan-msg', sh).textContent = t; }; ov.hidden = false; msg('Wczytuję zdjęcia…');
       try {
-        let text = '';
-        for (let i = 0; i < files.length; i++) {
-          const data = await readImage(files[i], 2400, .9); msg(`Przygotowuję obraz (${i + 1}/${files.length})…`); const prep = await ocrPrep(data);
-          for (const psm of [3, 11]) {
-            msg(`Rozpoznaję tekst — zdjęcie ${i + 1}/${files.length}, przebieg ${psm === 3 ? 1 : 2}/2…`);
-            text += '\n' + await ocrRecognize(prep, m => { if (m.status === 'recognizing text') msg(`Rozpoznaję tekst — zdjęcie ${i + 1}/${files.length}, przebieg ${psm === 3 ? 1 : 2}/2 (${Math.round(m.progress * 100)}%)`); }, psm);
-          }
-        }
-        const r = RegParse.parse(text), res = $('#reg-res', sh);
+        const photos = [];
+        for (let i = 0; i < files.length; i++) { msg(`Przygotowuję zdjęcie ${i + 1}/${files.length}…`); photos.push(await grayFromData(await readImage(files[i], 2400, .92))); }
+        const r = await ScanLib.scan(photos, { progress: msg, recognize: (im, o) => ocrRecognizeEx(im, o) }), res = $('#reg-res', sh);
         const put = (name, val) => { const el = vform[name]; if (!el || val === null || val === undefined || val === '') return; el.value = val; const f = el.closest('.fld'); if (f) { f.classList.remove('hit'); void f.offsetWidth; f.classList.add('hit'); } };
-        put('make', r.make); put('model', r.model); put('year', r.year); put('plate', r.plate); put('vin', r.vin);
+        put('make', r.make); put('model', r.model); put('year', r.year); put('plate', r.plate); put('vin', r.vin); put('inspect', r.inspection);
         if (r.fuel) { const c = $(`.chip[data-v="${r.fuel}"]`, sh); if (c) c.click(); }
-        const rows = [['Marka', r.make], ['Model', r.model], ['Rok pierwszej rejestracji', r.year], ['Tablica rejestracyjna', r.plate], ['VIN', r.vin], ['Paliwo', r.fuel ? FUELS[r.fuel].l : null]];
-        const n = rows.filter(x => x[1]).length;
+        const S_ = r.sure || {}, rows = [['Marka', r.make], ['Model', r.model, S_.model === false], ['Rok produkcji', r.year], ['Tablica rejestracyjna', r.plate, S_.plate === false], ['VIN', r.vin, S_.vin === false], ['Paliwo', r.fuel ? FUELS[r.fuel].l : null], ['Termin badania technicznego', r.inspection ? fmtD(r.inspection) : null]];
+        const main = rows.slice(0, 6), n = main.filter(x => x[1]).length, unsure = main.some(x => x[1] && x[2]);
         res.hidden = false;
-        res.innerHTML = n ? `<div class="reglist">${rows.map(([k, val]) => `<div class="${val ? 'ok' : 'no'}"><span>${val ? ic('check', 15) : ic('alert', 15)}</span><i>${k}</i><b>${val ? esc(val) : 'nie rozpoznano'}</b></div>`).join('')}</div><p class="note">${n >= 5 ? '<b>Sprawdź dane</b> z dokumentem i uzupełnij przebieg.' : 'Nie wszystko udało się odczytać. <b>Uzupełnij brakujące pola ręcznie</b> lub spróbuj zrobić wyraźniejsze zdjęcie.'}${r.notes.includes('make-from-vin') ? ' Markę ustalono na podstawie numeru VIN.' : ''}</p>` : `<p class="note"><b>Nie udało się odczytać danych.</b> Spróbuj ponownie: równe, jasne zdjęcie bez odblasków, dokument wypełnia kadr. Możesz też wpisać dane ręcznie.</p>`;
-        if (n) { toast(n >= 5 ? 'Dowód odczytany — sprawdź dane' : 'Odczytano część danych — uzupełnij resztę'); vibrate([10, 40, 14]); }
+        res.innerHTML = rows.some(x => x[1]) ? `<div class="reglist">${rows.map(([k, val, chk]) => `<div class="${val ? (chk ? 'chk' : 'ok') : 'no'}"><span>${val ? ic(chk ? 'alert' : 'check', 15) : ic('alert', 15)}</span><i>${k}</i><b>${val ? esc(val) : (k.startsWith('Termin') ? 'wpisz ręcznie' : 'nie rozpoznano')}</b></div>`).join('')}</div>
+          <p class="note">${n >= 6 ? '<b>Sprawdź dane</b> z dokumentem i uzupełnij przebieg.' : 'Nie wszystko udało się odczytać. <b>Dodaj kolejne zdjęcia</b> (np. środek i tył dowodu) i dotknij „Odczytaj”, albo uzupełnij pola ręcznie.'}${unsure ? ' Pola ze znakiem ostrzeżenia mogą mieć przekłamany znak: porównaj je z dokumentem.' : ''}${r.notes.includes('make-from-vin') ? ' Markę ustalono na podstawie numeru VIN.' : ''}</p>` : `<p class="note"><b>Nie udało się odczytać danych.</b> Spróbuj ponownie: równe, jasne zdjęcie bez odblasków, dokument wypełnia kadr. Możesz też wpisać dane ręcznie.</p>`;
+        if (rows.some(x => x[1])) { toast(n >= 6 ? 'Dowód odczytany — sprawdź dane' : 'Odczytano część danych — dodaj zdjęcia lub uzupełnij'); vibrate([10, 40, 14]); }
+        for (const f of scanFiles.splice(0)) { if (urls.has(f)) { URL.revokeObjectURL(urls.get(f)); urls.delete(f); } } drawTray(); $('#reg-btn', sh).innerHTML = `${ic('scan', 20)} Dodaj kolejne zdjęcia dowodu`;
         sh.querySelector('.sh-body').scrollTo({ top: 0, behavior: 'smooth' });
       } catch (err) { toast('Nie udało się uruchomić skanera. Wpisz dane ręcznie.'); }
       finally { ov.hidden = true; ocrTerminate(); }
@@ -784,10 +824,13 @@ function vehicleSheet(id) {
     $('form', sh).addEventListener('submit', e => {
       e.preventDefault(); const f = formData(e.target), o = { name: f.name.trim(), make: f.make.trim(), model: f.model.trim(), year: +f.year || '', plate: f.plate.trim().toUpperCase(), vin: f.vin.replace(/\s/g, '').toUpperCase(), fuel: f.fuel, odo: num(f.odo) || 0, color: f.color, body: f.body, photo: vph[0] || '' };
       if (o.vin && !RegParse.validVin(o.vin) && !confirm(`Numer VIN „${o.vin}” wygląda nieprawidłowo (powinien mieć 17 znaków, bez liter I, O, Q). Zapisać mimo to?`)) return;
-      if (id) Object.assign(vById(id), o);
-      else {
+      const insp = /^\d{4}-\d{2}-\d{2}$/.test(f.inspect || '') ? f.inspect : '';
+      if (id) {
+        Object.assign(vById(id), o);
+        if (insp) { const r = S.reminders.find(x => x.vid === id && x.type === 'przeglad'); if (r) r.dueDate = insp; else S.reminders.push({ id: uid(), vid: id, type: 'przeglad', title: '', dueDate: insp, dueKm: '', everyMonths: RT.przeglad.m, everyKm: '', notes: '' }); }
+      } else {
         const nv = { id: uid(), ...o }; S.vehicles.push(nv); S.active = nv.id;
-        ['oc', 'przeglad', 'olej'].forEach(t => S.reminders.push({ id: uid(), vid: nv.id, type: t, title: '', dueDate: '', dueKm: '', everyMonths: RT[t].m, everyKm: RT[t].km || '', notes: '' }));
+        ['oc', 'przeglad', 'olej'].forEach(t => S.reminders.push({ id: uid(), vid: nv.id, type: t, title: '', dueDate: t === 'przeglad' ? insp : '', dueKm: '', everyMonths: RT[t].m, everyKm: RT[t].km || '', notes: '' }));
       }
       persist(); closeSheet(); render({ enter: true }); toast(id ? 'Zapisano' : 'Dodano pojazd — ustaw teraz jego terminy'); confetti();
     });

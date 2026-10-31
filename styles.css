@@ -407,3 +407,14 @@ a.btn{text-decoration:none}
 .reglist .no b{color:var(--muted);font-weight:600}
 .fld.hit input,.fld.hit select{border-color:var(--ok);animation:hit 1.6s var(--ease)}
 @keyframes hit{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 60%,transparent)}100%{box-shadow:0 0 0 14px transparent}}
+
+/* skaner dowodu: taca zdjęć i niepewne pola */
+.reg-thumbs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none}
+.reg-thumbs::-webkit-scrollbar{display:none}
+.rt{position:relative;flex:0 0 auto;width:72px;height:92px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--glass)}
+.rt img{width:100%;height:100%;object-fit:cover;display:block}
+.rt i{position:absolute;left:5px;bottom:5px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:rgba(0,0,0,.62);color:#fff;font:700 11px/20px var(--font,inherit);font-style:normal;text-align:center}
+.rt button{position:absolute;right:4px;top:4px;width:24px;height:24px;border-radius:12px;border:0;background:rgba(0,0,0,.62);color:#fff;display:grid;place-items:center;padding:0}
+#reg-tray .btn-row{display:flex;gap:8px;margin-top:8px}
+.reglist .chk span{color:var(--warn)}
+.reglist .chk b{color:var(--warn)}

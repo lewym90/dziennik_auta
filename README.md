@@ -14,7 +14,7 @@ Działa **offline**, otwiera się z ekranu startowego jak zwykła aplikacja, nie
 - **Wiele pojazdów** – przełączanie z poziomu garażu, osobne terminy i statystyki.
 - **Raport do sprzedaży auta** – pełna historia serwisowa do PDF (lub HTML), z opcją ukrycia kosztów, informacją o spójności przebiegu i miejscem na podpisy.
 - **Skaner paragonów** – zrób zdjęcie paragonu ze stacji, a aplikacja odczyta litry, cenę, kwotę, datę, stację i rodzaj paliwa. Rozpoznawanie działa lokalnie na telefonie (folder `ocr/`), zdjęcie nigdzie nie jest wysyłane.
-- **Dodawanie auta ze zdjęcia dowodu rejestracyjnego** – odczyt tablicy, VIN, marki, modelu, roku pierwszej rejestracji i paliwa; dane właściciela są pomijane, a zdjęcie nie jest zapisywane. Wynik zawsze trzeba sprawdzić przed zapisem.
+- **Dodawanie auta ze zdjęć dowodu rejestracyjnego** – możesz dodać kilka zdjęć naraz (przód, środek, tył, pieczątka badania technicznego). Odczyt: tablica, VIN, marka, model, rok produkcji, paliwo, a gdy pieczątka jest czytelna, także termin badania technicznego (ustawia przypomnienie o przeglądzie). Wzór zabezpieczający dowodu jest odfiltrowywany, a pola ryzykowne (VIN, tablica) są czytane kilka razy i wynik ustala się głosowaniem znak po znaku. Pola o niepewnym odczycie są oznaczone ostrzeżeniem. Dane właściciela są pomijane, zdjęcia nie są zapisywane ani wysyłane. Wynik zawsze trzeba sprawdzić przed zapisem.
 - **Zdjęcia faktur i dokumentów** przy wpisach serwisowych i tankowaniach, zdjęcie auta na pulpicie, opcjonalne dołączenie zdjęć do raportu sprzedażowego.
 - **Katalog warsztatów** – ocena, telefon, nawigacja, liczba wizyt i suma wydatków z historii serwisowej.
 - **Typy nadwozia** – hatchback, sedan, kombi, SUV, van z własną sylwetką na pulpicie.
@@ -76,7 +76,8 @@ app.js                  cała logika (bez zależności)
 sw.js                   service worker (offline)
 manifest.webmanifest    manifest PWA (ikony, skróty)
 receipt.js              parser paragonów
-regparse.js             parser dowodu rejestracyjnego
+regparse.js             parser dowodu rejestracyjnego (głosowanie między odczytami)
+scanlib.js              przygotowanie obrazu i potok odczytu dowodu (wiele zdjęć)
 push.js                 harmonogram i połączenie z serwerem push
 server/                 serwer powiadomień push + instalator + testy
 ocr/                    lokalny silnik OCR (tesseract.js, ~15 MB)
